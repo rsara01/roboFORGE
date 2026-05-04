@@ -1,30 +1,15 @@
-// True 3D terrain built from open data:
-//   - OpenStreetMap raster tiles for color (no key, attribution required)
-//   - AWS Mapzen "terrarium" terrain tiles for elevation (no key, attribution
-//     required). These encode height in RGB pixels:
-//         elevation_m = (R * 256 + G + B / 256) - 32768
-//
-// We sample the terrarium tile to a small canvas, read pixel heights into a
-// Float32Array, and apply them as Y displacement on a high-res PlaneGeometry
-// for each tile in the grid. Color and height are loaded independently so the
-// terrain renders quickly with imagery while elevation streams in.
-//
-// Coordinate convention matches the flat Terrain module: sim XZ in meters,
-// origin at the geocoded address. The height is "real" elevation relative
-// to the origin tile's mean elevation (we subtract that so the origin sits
-// at sim y = 0, regardless of the absolute altitude).
+
 
 import * as THREE from 'three';
 
-const ZOOM = 14;                  // tile zoom; 14 ~= 9.5 m/px at equator
-const TILE_SPAN = 5;              // 5x5 grid = 25 tiles
-const HEIGHT_SAMPLES = 64;        // vertices per tile edge (so 64x64 verts)
-const VERT_SCALE = 1.0;           // 1.0 = real-world; bump if hills look flat
+const ZOOM = 14;
+const TILE_SPAN = 5;
+const HEIGHT_SAMPLES = 64;
+const VERT_SCALE = 1.0;
 const METERS_PER_DEG_LAT = 111320;
 
 const TILE_PROVIDERS = {
-  // Hosted by AWS Open Data, free for any use with attribution.
-  // https://registry.opendata.aws/terrain-tiles/
+
   terrariumPNG: (z, x, y) => `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`,
   osm: (z, x, y) => `https://tile.openstreetmap.org/${z}/${x}/${y}.png`,
 };
@@ -40,7 +25,7 @@ function metersPerTile(lat, z) {
 }
 
 function decodeTerrarium(imageBitmap, samples) {
-  // Draw the tile to a small canvas and sample heights at a regular grid.
+
   const c = document.createElement('canvas');
   c.width = c.height = samples;
   const ctx = c.getContext('2d', { willReadFrequently: true });
@@ -69,8 +54,6 @@ export class Terrain3D {
     this._build();
   }
 
-  // ---- public API --------------------------------------------------------
-
   async setAddress(address) {
     const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(address);
     const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
@@ -96,8 +79,6 @@ export class Terrain3D {
     return { lat: this.origin.lat + dLat, lon: this.origin.lon + dLon };
   }
 
-  // Sample terrain height at sim XZ (returns 0 outside loaded area or if
-  // elevation hasn't streamed in yet). Used by physics for ground contact.
   heightAt(x, z) {
     if (!this._tiles) return 0;
     const m = this.metersPerTile;
@@ -115,10 +96,8 @@ export class Terrain3D {
     return 0;
   }
 
-  // ---- internals ---------------------------------------------------------
-
   _build() {
-    // Tear down old.
+
     while (this.group.children.length) {
       const c = this.group.children.pop();
       c.geometry?.dispose?.();
@@ -144,8 +123,6 @@ export class Terrain3D {
     const originCenterX = (0.5 - fx) * m;
     const originCenterZ = (0.5 - fy) * m;
 
-    // Build placeholder geometry now (flat) so the scene renders immediately;
-    // textures and heightmaps stream in asynchronously.
     for (let oy = -half; oy <= half; oy++) {
       for (let ox = -half; ox <= half; ox++) {
         const tx = ix + ox;
@@ -157,7 +134,6 @@ export class Terrain3D {
       }
     }
 
-    // Origin marker pin (red cone).
     const pin = new THREE.Mesh(
       new THREE.ConeGeometry(0.6, 2.0, 12),
       new THREE.MeshStandardMaterial({ color: 0xff3355, emissive: 0x441111 }),
@@ -179,7 +155,6 @@ export class Terrain3D {
 
     const tile = { mesh, geo, mat, cx: cxw, cz: czw, heights: null };
 
-    // Color tile.
     this._loader.load(
       TILE_PROVIDERS.osm(ZOOM, tx, ty),
       (tex) => {
@@ -189,30 +164,28 @@ export class Terrain3D {
         mat.needsUpdate = true;
       },
       undefined,
-      () => { /* tile failed; stays plain */ },
+      () => {  },
     );
 
-    // Height tile.
     fetch(TILE_PROVIDERS.terrariumPNG(ZOOM, tx, ty))
       .then(r => { if (!r.ok) throw new Error('terrarium ' + r.status); return r.blob(); })
       .then(blob => createImageBitmap(blob))
       .then(bmp => {
         const heights = decodeTerrarium(bmp, HEIGHT_SAMPLES);
         tile.heights = heights;
-        // First tile loaded sets the height-offset baseline so the origin sits
-        // near sim y=0 instead of e.g. 200 m above sea level.
+
         if (this._heightOffset === 0) {
-          // Use mean of this tile as the baseline.
+
           let sum = 0;
           for (let i = 0; i < heights.length; i++) sum += heights[i];
           this._heightOffset = sum / heights.length;
-          // Re-apply offset to tiles already loaded.
+
           for (const t of this._tiles) if (t.heights) this._applyHeights(t);
         } else {
           this._applyHeights(tile);
         }
       })
-      .catch(() => { /* leave flat on failure */ });
+      .catch(() => {  });
 
     return tile;
   }
@@ -221,13 +194,12 @@ export class Terrain3D {
     const pos = tile.geo.attributes.position;
     const arr = pos.array;
     const N = HEIGHT_SAMPLES;
-    // PlaneGeometry vertices ordered row-major; each vertex has (x, y, z) in
-    // local plane coords (x,y are the plane axes; z is the displacement).
+
     for (let iy = 0; iy < N; iy++) {
       for (let ix = 0; ix < N; ix++) {
         const idx = (iy * N + ix);
         const h = (tile.heights[idx] - this._heightOffset) * VERT_SCALE;
-        arr[idx * 3 + 2] = h;   // displace along plane normal (pre-rotation)
+        arr[idx * 3 + 2] = h;
       }
     }
     pos.needsUpdate = true;

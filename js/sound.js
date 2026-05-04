@@ -1,7 +1,4 @@
-// Lightweight WebAudio sound engine: synthesizes effects on the fly so we
-// don't ship audio assets. Voices are short bursts (clicks, hums, thuds);
-// the longer ones (motor hum, conveyor) are continuous oscillators whose
-// gain we ramp with intensity.
+
 
 const ctxRef = { ctx: null, master: null };
 
@@ -15,7 +12,7 @@ function ensureCtx() {
   master.connect(ctx.destination);
   ctxRef.ctx = ctx;
   ctxRef.master = master;
-  // Browsers gate audio until user interaction. Resume on the next gesture.
+
   const resume = () => {
     if (ctx.state === 'suspended') ctx.resume();
     window.removeEventListener('pointerdown', resume);
@@ -34,7 +31,6 @@ export const Sound = {
     if (ctxRef.master) ctxRef.master.gain.value = Math.max(0, Math.min(1, v));
   },
 
-  // ---- one-shots ---------------------------------------------------------
   click() { this._burst({ freq: 880, dur: 0.04, gain: 0.18, type: 'square' }); },
   ok()    { this._burst({ freq: 660, dur: 0.10, gain: 0.20, type: 'sine'   }); },
   err()   { this._burst({ freq: 180, dur: 0.18, gain: 0.30, type: 'sawtooth' }); },
@@ -47,7 +43,6 @@ export const Sound = {
   boom()  { this._noise({ dur: 0.7, gain: 0.55, lp: 700, attack: 0.005 }); },
   beep()  { this._burst({ freq: 1320, dur: 0.06, gain: 0.20, type: 'sine' }); },
 
-  // ---- continuous (call setIntensity(0..1) to fade in/out) --------------
   motor(name, baseFreq = 90) {
     const ctx = ensureCtx();
     if (!ctx) return { setIntensity() {}, stop() {} };
@@ -84,7 +79,6 @@ export const Sound = {
     return handle;
   },
 
-  // ---- internals --------------------------------------------------------
   _burst({ freq, dur, gain, type = 'sine' }) {
     if (!this.enabled) return;
     const ctx = ensureCtx(); if (!ctx) return;

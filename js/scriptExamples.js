@@ -1,5 +1,4 @@
-  // Built-in script examples shown in the Script tab's Examples dropdown.
-  // Each value is the literal source dropped into the textarea on selection.
+
 
   export const SCRIPT_EXAMPLES = {
     basic: `// Simple pick-and-place trajectory.

@@ -4,8 +4,6 @@ import * as THREE from 'three';
 import { buildLinearTrajectory } from './trajectory.js';
 import { solveIK } from './ik.js';
 
-// Sentinel thrown by script helpers when Stop is pressed. Treated as a
-// successful cancellation rather than an error in run()'s catch block.
 const SCRIPT_CANCELLED = Symbol('SCRIPT_CANCELLED');
 
 export class ScriptRunner {
@@ -32,9 +30,7 @@ export class ScriptRunner {
 
   stop() {
     this.cancelToken.cancelled = true;
-    // Flush any pending sim-frame waits so the awaiting helpers unblock and
-    // their trailing ckc() can throw cleanly. Without this, a Stop while the
-    // simulation is paused would hang the script forever.
+
     this.simClock?.wakeUp?.();
   }
 
@@ -60,7 +56,7 @@ async run(source) {
 
     const scan = ({ fov = Math.PI / 3, range = 2.0 } = {}) => {
       if (!physics) return [];
-      // Prefer a mounted camera EE; fall back to primary tip.
+
       const ee = findEE('camera') || primary();
       const useCone = ee?.type === 'camera' && ee.tip;
       let camPos, camFwd;
@@ -97,9 +93,6 @@ const setJoint = (i, v) => robot.setJointValue(i, +v);
     const getJoint = (i) => robot.getJointValue(i);
     const getAllJoints = () => robot.joints.map(j => j.value);
 
-    // Throws SCRIPT_CANCELLED if Stop has been pressed. Called at the entry
-    // of every async helper so that user `while (true)` loops break out
-    // immediately instead of spinning through cancelled awaits.
     const ckc = () => { if (token.cancelled) throw SCRIPT_CANCELLED; };
 
     const wait = async (seconds) => {
@@ -189,16 +182,12 @@ const gripper = (open01) => {
       if (color != null) ee.setParam('color', color);
     };
 
-    // List all blocks in the scene that are NOT currently held by a tool.
-    // Includes free blocks AND blocks riding the conveyor belt. Each entry:
-    //   { x, y, z, color, body, onBelt }
-    // The `body` ref lets you call helpers that need a specific block.
     const blocks = () => {
       if (!physics) return [];
       const out = [];
       const wp = new THREE.Vector3();
       for (const b of physics.bodies) {
-        if (b.attachedTo && b.attachedTo.isObject3D) continue;   // held by a tool
+        if (b.attachedTo && b.attachedTo.isObject3D) continue;
         b.mesh.updateWorldMatrix(true, false);
         wp.setFromMatrixPosition(b.mesh.matrixWorld);
         const c = b.mesh.material.color;

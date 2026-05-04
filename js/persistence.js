@@ -50,7 +50,6 @@ export function jsonToRobot(robot, data, makeEE) {
     }
   }
 
-  // v2 stores an array; v1 stored a single endEffector. Accept both.
   const eeList = Array.isArray(data.endEffectors)
     ? data.endEffectors
     : (data.endEffector ? [data.endEffector] : []);
@@ -157,7 +156,7 @@ const eeJoints = Array.from(doc.getElementsByTagName('joint'))
   if (makeEE) {
     for (const ee of eeJoints) {
       const childName = ee.querySelector('child').getAttribute('link');
-      // Strip "end_effector_" prefix and any trailing "_<n>" suffix from duplicate-naming.
+
       const type = childName.replace(/^end_effector_/, '').replace(/_\d+$/, '');
       makeEE(type);
     }

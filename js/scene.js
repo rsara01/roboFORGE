@@ -81,7 +81,7 @@ const orbit = new OrbitControls(camera, renderer.domElement);
   orbit.minDistance = 0.3;
   orbit.maxDistance = 20;
   orbit.maxPolarAngle = Math.PI * 0.49;
-  orbit.zoomSpeed = 2.4;        // faster scroll-wheel zoom
+  orbit.zoomSpeed = 2.4;
   orbit.panSpeed = 1.2;
 
 const transform = new TransformControls(camera, renderer.domElement);

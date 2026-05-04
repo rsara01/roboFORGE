@@ -15,7 +15,6 @@ export function solveIK(robot, target, options = {}) {
   const tol = options.tolerance ?? 0.005;
   if (robot.joints.length === 0) return { converged: false, error: Infinity, iterations: 0 };
 
-  // Lift target above the floor so CCD never aims through it.
   if (robot.floorClearance && target.y < robot.floorY + 0.02) {
     target = target.clone();
     target.y = robot.floorY + 0.02;
@@ -40,8 +39,7 @@ export function solveIK(robot, target, options = {}) {
         _solvePrismatic(j, robot, target);
       }
     }
-    // If this CCD pass drove the arm into a self/floor collision, walk it back
-    // and stop — the previous iteration's pose was the best safe approximation.
+
     if (robot._hasViolation()) {
       robot._restoreJointValues(iterSnap);
       robot.getEndEffectorWorldPosition(eeWorld);

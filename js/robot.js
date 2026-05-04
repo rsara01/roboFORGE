@@ -6,9 +6,6 @@ export const AXIS_VECTOR = {
   z: new THREE.Vector3(0, 0, 1),
 };
 
-// Direction the link's body extends from its joint anchor. Default '+y' keeps
-// the historic behaviour (links stack upward); SCARA uses '+x' for horizontal
-// arms; Cartesian gantries use any of these.
 export const LINK_AXES = ['+y', '-y', '+x', '-x', '+z', '-z'];
 export const LINK_AXIS_VECTOR = {
   '+y': new THREE.Vector3( 0,  1,  0),
@@ -18,8 +15,7 @@ export const LINK_AXIS_VECTOR = {
   '+z': new THREE.Vector3( 0,  0,  1),
   '-z': new THREE.Vector3( 0,  0, -1),
 };
-// Rotation applied to a link group whose mesh was modelled along +Y, so its
-// "up" lies along the chosen world-link-axis.
+
 const LINK_AXIS_QUAT = (() => {
   const q = {};
   const tmp = new THREE.Vector3(0, 1, 0);
@@ -54,8 +50,7 @@ export class Robot {
     this.floorClearance = true;
     this.floorY = 0.005;
     this.selfCollision = true;
-    // Two non-adjacent links must keep this much clearance on top of their
-    // combined radii — a small slack so contacting flanges don't lock the arm.
+
     this.selfCollisionSlack = -0.01;
 
     this.rootGroup = new THREE.Group();
@@ -76,9 +71,6 @@ export class Robot {
     }
   }
 
-  // Joint tips are the high-curvature points of the kinematic chain — checking
-  // them (plus EE tips) catches every realistic floor violation without having
-  // to sample link bodies.
   checkFloorClearance() {
     for (const j of this.joints) {
       j.tip.updateWorldMatrix(true, false);
@@ -93,9 +85,6 @@ export class Robot {
     return false;
   }
 
-  // Approximate each link as a capsule (segment from articulator to tip with
-  // the link's radius) and check non-adjacent pairs for intersection.
-  // Adjacent links share a joint by design, so we skip them.
   checkSelfCollision() {
     const n = this.joints.length;
     if (n < 3) return false;
@@ -125,8 +114,6 @@ export class Robot {
     return false;
   }
 
-  // Convenience accessor that keeps existing IK / scripting / persistence paths
-  // working with the "primary" (first) end effector.
   get endEffector() {
     return this.endEffectors[0] || null;
   }
@@ -242,10 +229,7 @@ _buildRevoluteHousing(j) {
   }
 
 _buildPrismaticHousing(j) {
-    // Linear-actuator silhouette: a fixed cylinder "barrel" plus a thinner
-    // rod that pokes out one end. Body and end caps live in `grp` (the static
-    // anchor) so they don't move; the rod is added later to j.articulator
-    // via _buildPrismaticRod() so it slides with the joint value.
+
     const grp = new THREE.Group();
     grp.name = `${j.name}-housing`;
 
@@ -255,13 +239,11 @@ _buildPrismaticHousing(j) {
     const barrelLen = 0.16;
     const barrelR   = 0.045;
 
-    // Barrel — long cylinder oriented along Y.
     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(barrelR, barrelR, barrelLen, 24), bodyMat);
     barrel.castShadow = barrel.receiveShadow = true;
     barrel.userData.jointId = j.id;
     grp.add(barrel);
 
-    // End caps (visually anchor the barrel and hide the rod's exit hole).
     const capGeo = new THREE.CylinderGeometry(barrelR * 1.18, barrelR * 1.18, 0.018, 24);
     const capTop = new THREE.Mesh(capGeo, darkMat);
     capTop.position.y =  barrelLen / 2 + 0.009;
@@ -272,8 +254,6 @@ _buildPrismaticHousing(j) {
     capBot.castShadow = capBot.receiveShadow = true;
     grp.add(capBot);
 
-    // Mounting flange around the lower cap so it visually attaches to whatever
-    // it's mounted on.
     const flange = new THREE.Mesh(
       new THREE.CylinderGeometry(barrelR * 1.55, barrelR * 1.55, 0.014, 24),
       darkMat
@@ -282,7 +262,6 @@ _buildPrismaticHousing(j) {
     flange.castShadow = flange.receiveShadow = true;
     grp.add(flange);
 
-    // Two ribs on the side give it a "machined" look.
     const ribMat = darkMat;
     const ribGeo = new THREE.BoxGeometry(barrelR * 2.2, 0.012, 0.014);
     for (const yOffset of [-0.03, 0.03]) {
@@ -301,8 +280,6 @@ _buildPrismaticHousing(j) {
     return grp;
   }
 
-  // Builds the moving piston rod for a prismatic joint. Called separately so
-  // it can be parented to j.articulator (which slides with the joint value).
   _buildPrismaticRod(j) {
     const grp = new THREE.Group();
     grp.name = `${j.name}-rod`;
@@ -313,26 +290,17 @@ _buildPrismaticHousing(j) {
     const rodLen = (j._barrelLen || 0.16) * 1.4;
     const rodR   = (j._barrelR   || 0.045) * 0.4;
 
-    // Rod centered around the articulator origin so it telescopes through the
-    // barrel as `value` shifts the articulator.
     const rod = new THREE.Mesh(new THREE.CylinderGeometry(rodR, rodR, rodLen, 16), rodMat);
     rod.castShadow = rod.receiveShadow = true;
     grp.add(rod);
 
-    // A small head on the moving end (along +axis) where the next link mounts.
     const head = new THREE.Mesh(new THREE.CylinderGeometry(rodR * 1.8, rodR * 1.8, 0.022, 18), headMat);
     head.castShadow = true;
 
-    // Position the head along the joint axis (which is +Y in articulator-local
-    // frame, since prismatic uses AXIS_VECTOR translation in world; the
-    // articulator's local frame aligns with joint axis after housing rotation).
     const a = AXIS_VECTOR[j.axis] || AXIS_VECTOR.y;
     head.position.set(a.x * (rodLen / 2 + 0.011), a.y * (rodLen / 2 + 0.011), a.z * (rodLen / 2 + 0.011));
     grp.add(head);
 
-    // Orient the rod along the joint axis. Default cylinder is along +Y; for
-    // axis x or z, rotate the rod (and head positioning above already accounts
-    // for axis direction). Easier: rotate the whole rod group when needed.
     if (j.axis === 'x') {
       rod.rotation.z = Math.PI / 2;
       head.position.set((rodLen / 2 + 0.011), 0, 0);
@@ -392,8 +360,6 @@ _buildLinkVisual(j) {
       grp.add(stripe);
     }
 
-    // Re-orient the entire link group so its long axis matches j.link.axis
-    // (default '+y'). The mesh is modelled along +Y so identity quat = '+y'.
     const axisName = j.link.axis || '+y';
     grp.quaternion.copy(LINK_AXIS_QUAT[axisName] || LINK_AXIS_QUAT['+y']);
 
@@ -458,7 +424,6 @@ addJoint(opts = {}) {
     j.articulator.name = `${j.name}-articulator`;
     j.group.add(j.articulator);
 
-    // Prismatic joints get a piston rod that visibly slides with the value.
     if (type === 'prismatic') {
       j.articulator.add(this._buildPrismaticRod(j));
     }
@@ -620,11 +585,6 @@ rebuildJointGeometry(j) {
     for (const j of this.joints) j.axesHelper.visible = v;
   }
 
-  // ---- End effector slots --------------------------------------------------
-  // Multiple EEs may be mounted simultaneously (e.g. a tool + an inspection
-  // camera). Index 0 is the "primary" used by IK and getEndEffectorWorldPosition.
-  // Aux EEs are visually offset sideways so they don't overlap geometrically.
-
   addEndEffector(eeObj) {
     if (!eeObj) return null;
     const last = this.joints.length ? this.joints[this.joints.length - 1].tip : this.baseTip;
@@ -635,7 +595,6 @@ rebuildJointGeometry(j) {
     return eeObj;
   }
 
-  // Replaces any existing EEs with this single one (preserves old single-EE API).
   attachEndEffectorGroup(eeObj) {
     this.detachAllEndEffectors();
     return this.addEndEffector(eeObj);
@@ -659,8 +618,7 @@ rebuildJointGeometry(j) {
   detachEndEffector() { this.detachAllEndEffectors(); }
 
   _restackEndEffectors() {
-    // Side-mount any EEs beyond the primary so they don't physically collide
-    // with the working tool. Primary stays centered (so IK targets remain valid).
+
     for (let i = 0; i < this.endEffectors.length; i++) {
       const ee = this.endEffectors[i];
       const offset = i === 0 ? 0 : 0.07 + (i - 1) * 0.07;
@@ -696,8 +654,6 @@ jointFromObject(obj) {
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-// Squared closest distance between line segments [a0,a1] and [b0,b1].
-// Standard parametric solver from Ericson, Real-Time Collision Detection §5.1.9.
 const _ssD1 = new THREE.Vector3();
 const _ssD2 = new THREE.Vector3();
 const _ssR  = new THREE.Vector3();

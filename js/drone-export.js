@@ -1,8 +1,4 @@
-// Convert a list of {x,y,z} sim waypoints (meters, ENU, origin = geocoded
-// address) into a Python script you can run against a real drone (or SITL)
-// with DroneKit. The waypoints are converted to absolute lat/lon using the
-// terrain origin so the script is location-aware. Altitude is preserved as
-// relative-to-takeoff meters.
+
 
 export function exportDroneKit(waypoints, originLatLon, missionName = 'roboforge_mission') {
   const lines = [];
@@ -29,7 +25,7 @@ export function exportDroneKit(waypoints, originLatLon, missionName = 'roboforge
   lines.push(`# Recorded waypoints from the simulator (meters, sim ENU):`);
   lines.push(`WAYPOINTS = [`);
   for (const p of waypoints) {
-    // Sim convention: x=east, z=north(negative), y=altitude.
+
     lines.push(`    (${p.x.toFixed(2)}, ${(-p.z).toFixed(2)}, ${p.y.toFixed(2)}),  # east_m, north_m, alt_m`);
   }
   lines.push(`]`);

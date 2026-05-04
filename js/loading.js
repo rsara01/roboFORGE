@@ -1,7 +1,4 @@
-// Tiny loading overlay shared by index.html and drone.html. Created
-// programmatically so it sits above everything; fades out when the page
-// signals it's ready via Loading.hide(). The overlay uses the brand
-// gradient + the small logo mark so it feels consistent across pages.
+
 
 const STYLE_ID = 'rf-loading-style';
 
@@ -84,5 +81,4 @@ export const Loading = {
   },
 };
 
-// Auto-show as soon as imported so we cover the initial render gap.
 Loading.show();

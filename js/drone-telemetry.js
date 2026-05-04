@@ -1,6 +1,4 @@
-// Multi-channel rolling-window scope plot for drone telemetry.
-// Each call to push(t, channels[]) appends one sample; render() draws the
-// last `windowSec` seconds across the canvas. Auto-scales Y to data range.
+
 
 const COLORS = ['#4ea1ff', '#ffae42', '#66bb6a', '#ef5350', '#ab47bc', '#26c6da'];
 
@@ -8,10 +6,10 @@ export class TelemetryPlot {
   constructor(canvas, channels, opts = {}) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    this.channels = channels;             // [{name, color?}]
+    this.channels = channels;
     this.windowSec = opts.windowSec ?? 12;
     this.history = [];
-    this.yMin = opts.yMin;                // optional fixed range
+    this.yMin = opts.yMin;
     this.yMax = opts.yMax;
     this._fit();
     if (typeof ResizeObserver !== 'undefined') {
@@ -47,7 +45,6 @@ export class TelemetryPlot {
     ctx.fillStyle = '#0a0e14';
     ctx.fillRect(0, 0, w, h);
 
-    // Gridlines.
     ctx.strokeStyle = '#1f2a3a';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -93,13 +90,11 @@ export class TelemetryPlot {
       ctx.stroke();
     }
 
-    // Axis labels.
     ctx.fillStyle = '#5b6b7d';
     ctx.font = `${10 * dpr}px monospace`;
     ctx.fillText(maxV.toFixed(2), 4 * dpr, 12 * dpr);
     ctx.fillText(minV.toFixed(2), 4 * dpr, h - 4 * dpr);
 
-    // Legend (top-right).
     let lx = w - 4 * dpr;
     for (let j = this.channels.length - 1; j >= 0; j--) {
       const label = this.channels[j].name;

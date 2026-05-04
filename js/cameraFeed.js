@@ -1,7 +1,4 @@
-// Live "what the camera sees" panel. Attaches a THREE.PerspectiveCamera to a
-// camera EE's tip and renders the shared scene into a small canvas in the
-// viewport. Also classifies the closest visible object in the cone and shows
-// its colour + shape underneath the feed.
+
 
 import * as THREE from 'three';
 
@@ -20,7 +17,6 @@ export class CameraFeed {
     this.renderer.setSize(FEED_W, FEED_H, false);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-    // DOM container.
     const wrap = document.createElement('div');
     wrap.id = 'camera-feed';
     wrap.className = 'camera-feed hidden';
@@ -44,8 +40,6 @@ export class CameraFeed {
     this.dom.classList.toggle('hidden', !v);
   }
 
-  // Called from main.js animate(). Re-renders the feed at ~24 Hz to keep it
-  // cheap (the main scene already renders every frame).
   step(dt) {
     this._tickAccum += dt;
     if (this._tickAccum < 1 / 24) return;
@@ -61,7 +55,7 @@ export class CameraFeed {
     ee.tip.updateWorldMatrix(true, false);
     const tipPos = new THREE.Vector3().setFromMatrixPosition(ee.tip.matrixWorld);
     const tipQuat = new THREE.Quaternion().setFromRotationMatrix(ee.tip.matrixWorld);
-    // Camera EE forward axis is +Z (frustum cone is along +Z), see makeCamera.
+
     const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(tipQuat);
     const up  = new THREE.Vector3(0, 1, 0).applyQuaternion(tipQuat);
     this.cam.position.copy(tipPos);
@@ -78,10 +72,10 @@ export class CameraFeed {
     let bestD = Infinity;
     const wp = new THREE.Vector3();
     for (const b of this.physics.bodies) {
-      // Held by an EE → not "out there". Belt blocks count.
+
       if (b.attachedTo && !(b.attachedTo.constructor && b.attachedTo.constructor.name === 'Conveyor')
-                       && !b.attachedTo.isObject3D /* on a tip */) {
-        // Skip blocks held by tools.
+                       && !b.attachedTo.isObject3D ) {
+
       }
       if (b.attachedTo && b.attachedTo.isObject3D) continue;
       wp.setFromMatrixPosition(b.mesh.matrixWorld);
@@ -90,7 +84,7 @@ export class CameraFeed {
       if (dist < 0.05 || dist > 3.5) continue;
       dir.divideScalar(dist);
       const ang = Math.acos(THREE.MathUtils.clamp(dir.dot(fwd), -1, 1));
-      if (ang > Math.PI / 4) continue;        // half-FOV gate
+      if (ang > Math.PI / 4) continue;
       if (dist < bestD) { bestD = dist; closest = b; }
     }
     if (!closest) {

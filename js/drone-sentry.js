@@ -1,7 +1,4 @@
-// Sentry-gun easter egg. When equipped, the orbit camera is replaced by a
-// fixed first-person view from the sentry's barrel, with a crosshair overlay.
-// Mouse aims (yaw/pitch); left-click fires a hit-scan ray that damages the
-// drone if the ray passes within hitRadius of the drone's position.
+
 
 import * as THREE from 'three';
 import { Sound } from './sound.js';
@@ -12,8 +9,8 @@ export class Sentry {
     this.renderer = renderer;
     this.simCamera = camera;
     this.orbit = orbit;
-    this.target = target;        // function returning the drone's position vec3
-    this.dronePhysics = null;    // injected later
+    this.target = target;
+    this.dronePhysics = null;
 
     this.equipped = false;
     this.yaw = 0;
@@ -132,8 +129,7 @@ export class Sentry {
   toggle() { this.equipped ? this.unequip() : this.equip(); }
 
   _pointerLockChange() {
-    // If the user pressed ESC, drop equipped state but keep the visual sentry
-    // so they can re-equip without being thrown back to the dashboard.
+
     if (document.pointerLockElement !== this.renderer.domElement && this.equipped) {
       this.unequip();
     }
@@ -158,11 +154,10 @@ export class Sentry {
     const muzzlePos = new THREE.Vector3();
     this.gun.updateWorldMatrix(true, false);
     muzzlePos.setFromMatrixPosition(this.gun.matrixWorld);
-    // The gun's local +Z is forward (matches the barrel).
+
     const forward = new THREE.Vector3(0, 0, 1)
       .applyQuaternion(this.gun.getWorldQuaternion(new THREE.Quaternion()));
 
-    // Tracer flash.
     this._flashTracer(muzzlePos, forward);
 
     if (!this.dronePhysics || this.dronePhysics.wrecked) return;
@@ -170,12 +165,12 @@ export class Sentry {
     const toDrone = droneP.clone().sub(muzzlePos);
     const dist = toDrone.length();
     if (dist < 0.01) return;
-    // Project drone onto ray, get perpendicular distance.
+
     const t = toDrone.dot(forward);
-    if (t < 0) return;       // behind
+    if (t < 0) return;
     const closest = muzzlePos.clone().addScaledVector(forward, t);
     const miss = closest.distanceTo(droneP);
-    const hitRadius = 0.30;  // generous — drone is small at distance
+    const hitRadius = 0.30;
     if (miss < hitRadius && dist < 200) {
       const hitDir = forward.clone();
       this.dronePhysics.damage(35, hitDir);
@@ -199,14 +194,12 @@ export class Sentry {
     requestAnimationFrame(tick);
   }
 
-  // Called every frame to update the turret rotation, the camera, and to
-  // keep the gun pointed where the user is aiming.
   step(dt) {
     this.turret.rotation.y = this.yaw;
     this.gun.rotation.x = -this.pitch;
 
     if (this.equipped) {
-      // First-person camera at the muzzle, looking along +Z of the gun.
+
       this.gun.updateWorldMatrix(true, false);
       const camPos = new THREE.Vector3(0, 0.06, 0.18).applyMatrix4(this.gun.matrixWorld);
       const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(this.gun.getWorldQuaternion(new THREE.Quaternion()));

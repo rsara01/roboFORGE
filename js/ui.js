@@ -633,7 +633,7 @@ export class UI {
       const info = wrap.querySelector('.ee-detect-info');
       const runScan = () => {
         const hits = physics.scanBlocks(ee.tip, { fov: Math.PI / 3, range: 2.5 });
-        // Refresh highlights so previously-visible blocks that left the cone unhighlight.
+
         for (const b of physics.bodies) physics.setBlockHighlight(b, false);
         if (ee.params.detect) for (const h of hits) physics.setBlockHighlight(h.body, true);
         info.textContent = hits.length === 0
@@ -654,7 +654,7 @@ export class UI {
       wrap.querySelector('[data-stop-task]').addEventListener('click', () => {
         this.ctx.stopScript();
       });
-      // One persistent interval per camera EE, even across UI re-renders.
+
       if (ee._cameraTickHandle) clearInterval(ee._cameraTickHandle);
       ee._cameraTickHandle = setInterval(() => { if (ee.params.detect) runScan(); }, 250);
       if (!ee._cameraDisposeWrapped) {
@@ -689,8 +689,6 @@ export class UI {
       wrap.querySelector('[data-color]').addEventListener('input', (e) => ee.setParam('color', parseInt(e.target.value.slice(1), 16)));
     }
 
-    // Universal manipulation row — every EE with a tip can attach/detach a
-    // nearby block. Rendered last so it sits below the type-specific controls.
     if (ee.tip) {
       const row = document.createElement('div');
       row.className = 'row';
@@ -716,7 +714,6 @@ export class UI {
       }
     }
 
-    // Throttle torque + blocks list refresh to ~5 Hz to avoid layout thrash.
     this._readoutTick = (this._readoutTick || 0) + 1;
     if (this._readoutTick % 12 === 0) {
       this.refreshTorques();

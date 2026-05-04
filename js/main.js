@@ -23,7 +23,6 @@ import {
 
 document.body.classList.add('app-loaded');
 
-// Topbar theme + sound controls.
 {
   const accentEl = document.getElementById('topbar-accent');
   if (accentEl) {
@@ -36,7 +35,6 @@ document.body.classList.add('app-loaded');
   }
 }
 
-// Click sound on every topbar/right-panel button.
 document.addEventListener('click', (e) => {
   const t = e.target;
   if (t && t.tagName === 'BUTTON') Sound.click();
@@ -45,9 +43,6 @@ document.addEventListener('click', (e) => {
 const viewport = document.getElementById('viewport');
 const scene3d = createScene(viewport);
 const { scene, camera, renderer, orbit, transform } = scene3d;
-
-
-
 
 const robots = [new Robot(scene)];
 let activeRobotIdx = 0;
@@ -124,8 +119,6 @@ const simClock = {
     });
   },
 
-  
-  
   wakeUp() {
     if (!app._scriptWaiters.length) return;
     const w = app._scriptWaiters;
@@ -143,17 +136,12 @@ const simClock = {
 
 const scriptRunner = new ScriptRunner(robot, simClock, document.getElementById('script-output'), physics,  null);
 
-
-
-
-
-
 const LASER_BEAM_LENGTH = 0.65;
 const LASER_BURN_THRESHOLD = 0.4;
 const _laserRay = new THREE.Raycaster();
 const _laserOrigin = new THREE.Vector3();
 const _laserDir = new THREE.Vector3();
-const _laserBurn = new WeakMap();   
+const _laserBurn = new WeakMap();
 
 function _tickLasers(dt) {
   const lasers = robot.endEffectors.filter(e => e.type === 'laser');
@@ -187,9 +175,7 @@ function _tickLasers(dt) {
     state.time += dt;
     physics.setBlockHighlight(hitBody, true, 0xff3030);
     if (state.time >= LASER_BURN_THRESHOLD) {
-      
-      
-      
+
       const slicePerp = new THREE.Vector3(_laserDir.z, 0, -_laserDir.x);
       physics.sliceBlock(hitBody, slicePerp);
       _laserBurn.set(ee, { body: null, time: 0 });
@@ -243,7 +229,7 @@ transform.attach(j.articulator);
 
   spawnRobot(opts = {}) {
     const r = new Robot(scene);
-    
+
     const idx = robots.length;
     r.rootGroup.position.x = opts.x ?? (idx * 1.4);
     if (opts.z != null) r.rootGroup.position.z = opts.z;
@@ -275,7 +261,7 @@ transform.attach(j.articulator);
   },
 
   _highlightActiveRobot() {
-    
+
     for (let i = 0; i < robots.length; i++) {
       const dim = i !== activeRobotIdx;
       robots[i].rootGroup.traverse(o => {
@@ -297,8 +283,7 @@ loadPreset(name) {
       robot.addJoint({ type: 'revolute', axis: 'x', linkLength: 0.10, linkAxis: '+y' });
       robot.addJoint({ type: 'revolute', axis: 'y', linkLength: 0.08, linkAxis: '+y' });
     } else if (name === 'industrial') {
-      
-      
+
       robot.addJoint({ type: 'revolute', axis: 'y', linkLength: 0.18, linkAxis: '+y' });
       robot.addJoint({ type: 'revolute', axis: 'x', linkLength: 0.42, linkAxis: '+y' });
       robot.addJoint({ type: 'revolute', axis: 'x', linkLength: 0.36, linkAxis: '+y' });
@@ -306,11 +291,7 @@ loadPreset(name) {
       robot.addJoint({ type: 'revolute', axis: 'x', linkLength: 0.10, linkAxis: '+y' });
       robot.addJoint({ type: 'revolute', axis: 'y', linkLength: 0.08, linkAxis: '+y' });
     } else if (name === 'scara') {
-      
-      
-      
-      
-      
+
       robot.addJoint({ type: 'revolute',  axis: 'y', linkLength: 0.30, linkAxis: '+y' });
       robot.addJoint({ type: 'revolute',  axis: 'y', linkLength: 0.30, linkAxis: '+x' });
       robot.addJoint({ type: 'revolute',  axis: 'y', linkLength: 0.25, linkAxis: '+x' });
@@ -318,8 +299,7 @@ loadPreset(name) {
                       min: -0.18, max: 0 });
       robot.addJoint({ type: 'revolute',  axis: 'y', linkLength: 0.05, linkAxis: '-y' });
     } else if (name === 'cartesian') {
-      
-      
+
       robot.addJoint({ type: 'prismatic', axis: 'x', linkLength: 0.10, linkAxis: '+x',
                       min: -0.30, max: 0.30 });
       robot.addJoint({ type: 'prismatic', axis: 'z', linkLength: 0.10, linkAxis: '+z',
@@ -577,7 +557,7 @@ try {
 
 renderer.domElement.addEventListener('pointerdown', (e) => {
   if (transform.dragging) return;
-  
+
   const candidates = [];
   for (const r of robots) candidates.push(...r.pickableObjects());
   candidates.push(ikTarget.mesh);
@@ -588,7 +568,7 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
     transform.attach(ikTarget.group);
     return;
   }
-  
+
   for (let i = 0; i < robots.length; i++) {
     const j = robots[i].jointFromObject(hit.object);
     if (j) {
@@ -685,10 +665,9 @@ if (sim.playing) {
   }
 
 if (!sim.playing) for (const ee of robot.endEffectors) ee.update?.(wallDt);
-  
-  
+
   conveyor.step(wallDt);
-  // Conveyor hum tracks enabled + speed.
+
   {
     const hum = Sound.motor('conveyor', 60);
     hum.setIntensity(conveyor.enabled ? Math.min(1, conveyor.speed / 0.5 + 0.15) : 0);

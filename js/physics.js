@@ -55,10 +55,6 @@ spawnBox(position = new THREE.Vector3(0.5, 0.05, 0.0), size = 0.06, color = 0xff
     this.spawnDefaultBlocks();
   }
 
-  // Scan free blocks visible from a tip object. If the EE provides a forward
-  // axis (camera frustum), pass {forward: 'z'} (default). Returns:
-  //   [{ body, distance, angle, worldPos: Vector3 }]
-  // sorted by distance.
   scanBlocks(tipObject, { fov = Math.PI / 3, range = 2.5, forward = 'z' } = {}) {
     if (!tipObject) return [];
     tipObject.updateWorldMatrix(true, false);
@@ -73,7 +69,7 @@ spawnBox(position = new THREE.Vector3(0.5, 0.05, 0.0), size = 0.06, color = 0xff
     const wp = new THREE.Vector3();
     const dir = new THREE.Vector3();
     for (const b of this.bodies) {
-      if (b.attachedTo && b.attachedTo.isObject3D) continue;  // skip blocks held by a tool
+      if (b.attachedTo && b.attachedTo.isObject3D) continue;
       wp.setFromMatrixPosition(b.mesh.matrixWorld);
       dir.copy(wp).sub(tipPos);
       const dist = dir.length();
@@ -99,8 +95,6 @@ spawnBox(position = new THREE.Vector3(0.5, 0.05, 0.0), size = 0.06, color = 0xff
     }
   }
 
-  // Replace `body` with two smaller halves flying apart along `splitDir`.
-  // Reset Blocks restores the originals (same code path as the UI button).
   sliceBlock(body, splitDir = new THREE.Vector3(1, 0, 0)) {
     const idx = this.bodies.indexOf(body);
     if (idx < 0) return;
@@ -112,11 +106,10 @@ spawnBox(position = new THREE.Vector3(0.5, 0.05, 0.0), size = 0.06, color = 0xff
 
     const dir = splitDir.clone();
     if (dir.lengthSq() < 1e-6) dir.set(1, 0, 0);
-    dir.y = 0; // keep halves horizontal so they slide instead of dive
+    dir.y = 0;
     if (dir.lengthSq() < 1e-6) dir.set(1, 0, 0);
     dir.normalize();
 
-    // Remove the original.
     if (body.attachedTo) body.attachedTo.remove(body.mesh);
     else this.scene.remove(body.mesh);
     body.mesh.geometry.dispose();
@@ -138,15 +131,13 @@ spawnBox(position = new THREE.Vector3(0.5, 0.05, 0.0), size = 0.06, color = 0xff
   }
 
 tryGrab(tipObject, radius = 0.04) {
-    // Strict contact grab: the tip must be touching the block (within its
-    // half-extent + small tolerance). Prevents grabbing blocks the gripper
-    // is hovering near but not actually on. Belt-held blocks remain eligible.
+
     tipObject.updateWorldMatrix(true, false);
     const tipPos = new THREE.Vector3().setFromMatrixPosition(tipObject.matrixWorld);
     let best = null, bestPenetration = -Infinity;
     const tmp = new THREE.Vector3();
     for (const b of this.bodies) {
-      if (b.attachedTo && b.attachedTo.isObject3D) continue;  // already gripped
+      if (b.attachedTo && b.attachedTo.isObject3D) continue;
       tmp.setFromMatrixPosition(b.mesh.matrixWorld);
       const d = tmp.distanceTo(tipPos);
       const reach = (b.halfExtents || 0.03) + radius;
@@ -195,9 +186,6 @@ release(tipObject = null) {
     if (released) Sound.release();
   }
 
-  // Register a horizontal slab the physics step will treat as a solid surface.
-  // `aabbFn` returns {minX, maxX, minZ, maxZ, top} in world space, recomputed
-  // each frame so a moving deck (e.g. a rotated conveyor) stays correct.
   registerSurface(aabbFn) {
     if (!this._surfaces) this._surfaces = [];
     this._surfaces.push(aabbFn);
@@ -218,7 +206,6 @@ release(tipObject = null) {
       b.mesh.position.y += b.vel.y * dt;
       b.mesh.position.z += b.vel.z * dt;
 
-      // Ground.
       let resting = false;
       if (b.mesh.position.y < b.halfExtents) {
         b.mesh.position.y = b.halfExtents;
@@ -229,7 +216,6 @@ release(tipObject = null) {
         resting = true;
       }
 
-      // Registered horizontal slabs (conveyor decks etc).
       for (const s of surfaces) {
         const px = b.mesh.position.x;
         const pz = b.mesh.position.z;
@@ -245,7 +231,6 @@ release(tipObject = null) {
         }
       }
 
-      // Block-on-block stacking (cheap AABB).
       for (const o of this.bodies) {
         if (o === b || o.attachedTo) continue;
         const dx = Math.abs(b.mesh.position.x - o.mesh.position.x);
@@ -262,7 +247,6 @@ release(tipObject = null) {
         }
       }
 
-      // Fell off the world: despawn so the scene stays clean.
       if (b.mesh.position.y < -3 || Math.abs(b.mesh.position.x) > 20 || Math.abs(b.mesh.position.z) > 20) {
         this.scene.remove(b.mesh);
         b.mesh.geometry.dispose();
@@ -273,9 +257,6 @@ release(tipObject = null) {
   }
 }
 
-// ---- Grab-attempt visual feedback ---------------------------------------
-// Briefly draws an expanding/fading torus at the tool tip so the user sees
-// where a "Grab nearest" press actually reached. Green = grabbed, red = miss.
 const _flashes = [];
 
 function _flashGrabRing(scene, worldPos, colorHex) {

@@ -1,6 +1,4 @@
-// Persistent UI theme: a single accent color the user can pick. Stored in
-// localStorage so the choice survives reloads and applies across the
-// dashboard, the arm simulator, and the drone simulator.
+
 
 const KEY = 'roboforge.theme';
 
@@ -56,5 +54,4 @@ export const Theme = {
   },
 };
 
-// Apply on import so initial paint uses the saved theme.
 Theme.apply();
