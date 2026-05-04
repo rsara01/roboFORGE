@@ -11,10 +11,11 @@ import { Sound } from './sound.js';
 import { Loading } from './loading.js';
 import { DronePhysics } from './drone-physics.js';
 import { DroneController } from './drone-pid.js';
-import { Terrain3D } from './drone-terrain-3d.js';
+import { City } from './drone-city.js';
 import { buildDroneMesh } from './drone-mesh.js';
 import { Sentry } from './drone-sentry.js';
 import { exportDroneKit, exportJSON } from './drone-export.js';
+import { TelemetryPlot } from './drone-telemetry.js';
 
 // -------------------------------------------------------------------------
 // Boot: scene, camera, renderer, lights.
@@ -46,22 +47,27 @@ orbit.minDistance = 1.0;
 orbit.maxDistance = 4000;
 
 const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-sun.position.set(40, 80, 30);
+sun.position.set(120, 220, 90);
 sun.castShadow = true;
-sun.shadow.mapSize.set(1024, 1024);
-sun.shadow.camera.left = -50; sun.shadow.camera.right = 50;
-sun.shadow.camera.top = 50; sun.shadow.camera.bottom = -50;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -220; sun.shadow.camera.right = 220;
+sun.shadow.camera.top = 220; sun.shadow.camera.bottom = -220;
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 800;
 scene.add(sun);
 scene.add(new THREE.AmbientLight(0xffffff, 0.55));
 
 // -------------------------------------------------------------------------
-// 3D terrain, drone visual, sentry.
+// City scene, drone visual, sentry.
 // -------------------------------------------------------------------------
 
-const terrain = new Terrain3D(scene);
+const terrain = new City(scene);
 
 const physics = new DronePhysics();
-physics.groundHeightFn = (x, z) => terrain.heightAt(x, z);
+// Bare-ground only — building rooftops + walls go through collideFn so the
+// drone doesn't get teleported up to a roof when it flies past a building.
+physics.groundHeightFn = () => 0;
+physics.collideFn = (pos, vel, r) => terrain.collide(pos, vel, r);
+physics.collideRadius = 0.55;
 const controller = new DroneController(physics);
 
 // Spawn the drone above the terrain so it isn't buried in a hill.
@@ -88,12 +94,26 @@ function reseatSentry() {
 // Drone-mounted camera (renders to the small canvas in the corner).
 // -------------------------------------------------------------------------
 
-const droneCam = new THREE.PerspectiveCamera(70, 320 / 200, 0.05, 4000);
+// FPV camera. 90° vertical FOV gives an action-cam-like wide angle in FPV
+// mode. Aspect is updated each frame to match whichever surface is rendering it.
+const droneCam = new THREE.PerspectiveCamera(90, 320 / 200, 0.02, 4000);
 const camCanvas = document.getElementById('cam-canvas');
 const camRenderer = new THREE.WebGLRenderer({ antialias: true, canvas: camCanvas });
 camRenderer.setPixelRatio(1);
 camRenderer.setSize(320, 200, false);
 camRenderer.outputColorSpace = THREE.SRGBColorSpace;
+
+// ---- FPV toggle: swap which camera renders to the main viewport ---------
+let fpvMode = false;
+function toggleFPV() {
+  fpvMode = !fpvMode;
+  // Lock orbit while in FPV so mouse/scroll don't fight the drone view.
+  orbit.enabled = !fpvMode;
+  const label = document.querySelector('#cam-feed .label');
+  if (label) label.textContent = fpvMode ? 'CHASE CAM' : 'DRONE CAM';
+  const btn = document.getElementById('btn-fpv');
+  if (btn) btn.classList.toggle('primary', fpvMode);
+}
 
 // -------------------------------------------------------------------------
 // Flight modes + waypoint recording.
@@ -110,34 +130,64 @@ let recordTimer = 0;
 
 const mission = { waypoints: [], idx: 0, holdTime: 0 };
 
-// Manual control state. Active in any mode so the drone is always nudgeable
-// (W/A/S/D nudges the target horizontally; Shift/Ctrl change altitude;
-// Q/E rotate yaw). In MANUAL mode this drives the drone continuously; in
-// HOVER mode the same keys give you direct control without switching modes.
+// Dual-stick keyboard control (Mode 2 layout, similar to a real RC transmitter).
+//
+//   Left stick  (WASD):  W/S = throttle (climb/descend)
+//                        A/D = yaw  (rotate left/right)
+//   Right stick (arrows): Up/Down    = pitch (forward/back, body-relative)
+//                         Left/Right = roll  (strafe left/right, body-relative)
+//
+// Inputs always nudge the position+yaw target — the inner PID then commands
+// the motors to track. Active in any flight mode (MISSION will keep
+// overwriting the target, so sticks don't fight a running mission).
 const keys = new Set();
+const STICK_KEYS = new Set([
+  'w','a','s','d',
+  'arrowup','arrowdown','arrowleft','arrowright',
+  'v','g','f',
+]);
 window.addEventListener('keydown', (e) => {
-  // Don't capture keys when typing in the address box etc.
   const tag = (e.target.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'textarea') return;
-  keys.add(e.key.toLowerCase());
-  if (e.key.toLowerCase() === 'g') sentry.toggle();
+  const k = e.key.toLowerCase();
+  if (STICK_KEYS.has(k)) e.preventDefault();   // stop arrow-keys from scrolling
+  keys.add(k);
+  if (k === 'g') sentry.toggle();
+  if (k === 'v' || k === 'f') toggleFPV();
 });
 window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
 
 function applyManualInput(dt) {
-  const speed = mode === FlightMode.MANUAL ? 6.0 : 4.0;
-  const dx = (keys.has('d') ? 1 : 0) - (keys.has('a') ? 1 : 0);
-  const dz = (keys.has('s') ? 1 : 0) - (keys.has('w') ? 1 : 0);
-  const dy = (keys.has('shift') ? 1 : 0) - (keys.has('control') ? 1 : 0);
-  const dyaw = (keys.has('q') ? 1 : 0) - (keys.has('e') ? 1 : 0);
-  if (dx || dz || dy || dyaw) {
-    target.x += dx * speed * dt;
-    target.z += dz * speed * dt;
-    const groundH = terrain.heightAt(target.x, target.z);
-    target.y = Math.max(groundH + 0.5, target.y + dy * speed * dt);
-    controller.targetYaw += dyaw * 1.5 * dt;
-    controller.setTarget(target);
+  // Left stick.
+  const throttle = (keys.has('w') ? 1 : 0) - (keys.has('s') ? 1 : 0);
+  const yawIn    = (keys.has('d') ? 1 : 0) - (keys.has('a') ? 1 : 0);
+  // Right stick.
+  const pitch = (keys.has('arrowup')    ? 1 : 0) - (keys.has('arrowdown')  ? 1 : 0);
+  const roll  = (keys.has('arrowright') ? 1 : 0) - (keys.has('arrowleft')  ? 1 : 0);
+
+  if (!throttle && !yawIn && !pitch && !roll) return;
+
+  const climbSpeed = 5.0;     // m/s
+  const yawSpeed   = 1.8;     // rad/s
+  const moveSpeed  = mode === FlightMode.MANUAL ? 8.0 : 6.0;
+
+  if (throttle) {
+    target.y += throttle * climbSpeed * dt;
+    const minH = terrain.heightAt(target.x, target.z) + 0.5;
+    if (target.y < minH) target.y = minH;
   }
+  if (yawIn) {
+    controller.targetYaw += yawIn * yawSpeed * dt;
+  }
+  if (pitch || roll) {
+    // Body-relative motion. Body forward = (sin(yaw), 0, cos(yaw)),
+    // body right = (cos(yaw), 0, -sin(yaw)).
+    const yaw = controller.targetYaw;
+    const sy = Math.sin(yaw), cy = Math.cos(yaw);
+    target.x += (pitch * sy + roll * cy) * moveSpeed * dt;
+    target.z += (pitch * cy - roll * sy) * moveSpeed * dt;
+  }
+  controller.setTarget(target);
 }
 
 // Place-drone and click-to-set-target.
@@ -286,33 +336,8 @@ function download(text, filename, mime) {
   setTimeout(() => URL.revokeObjectURL(a.href), 200);
 }
 
-// Address geocoding.
-const addrInput = document.getElementById('addr-input');
-const addrStatus = document.getElementById('addr-status');
-const addrCurrent = document.getElementById('addr-current');
-document.getElementById('btn-geocode').addEventListener('click', async () => {
-  const q = addrInput.value.trim();
-  if (!q) return;
-  const m = q.match(/^\s*(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)\s*$/);
-  addrStatus.textContent = 'Searching…';
-  try {
-    if (m) {
-      terrain.setOrigin(parseFloat(m[1]), parseFloat(m[2]), `${m[1]}, ${m[2]}`);
-      addrCurrent.textContent = 'Origin: ' + terrain.label;
-    } else {
-      const r = await terrain.setAddress(q);
-      addrCurrent.textContent = 'Origin: ' + r.display;
-    }
-    addrStatus.textContent = 'Ready';
-    // Drop the drone over the new origin so it doesn't fly off-map.
-    setTimeout(() => spawnDrone(new THREE.Vector2(0, 0)), 600);
-    Sound.ok();
-  } catch (err) {
-    addrStatus.textContent = 'Error';
-    Sound.err();
-    alert('Geocoding failed: ' + err.message);
-  }
-});
+// FPV button (the V key is wired in the global keydown handler).
+document.getElementById('btn-fpv').addEventListener('click', toggleFPV);
 
 // PID tuning panel.
 const pidBlocks = document.getElementById('pid-blocks');
@@ -361,6 +386,49 @@ document.getElementById('btn-pid-reset').addEventListener('click', () => {
   Sound.ok();
 });
 
+// Environment toggles + wind.
+const envGravity = document.getElementById('env-gravity');
+const envDrag = document.getElementById('env-drag');
+const windX = document.getElementById('wind-x');
+const windZ = document.getElementById('wind-z');
+const windXv = document.getElementById('wind-x-v');
+const windZv = document.getElementById('wind-z-v');
+envGravity.addEventListener('change', () => { physics.gravityEnabled = envGravity.checked; });
+envDrag.addEventListener('change', () => { physics.dragEnabled = envDrag.checked; });
+function syncWind() {
+  physics.wind.set(parseFloat(windX.value), 0, parseFloat(windZ.value));
+  windXv.textContent = parseFloat(windX.value).toFixed(1);
+  windZv.textContent = parseFloat(windZ.value).toFixed(1);
+}
+windX.addEventListener('input', syncWind);
+windZ.addEventListener('input', syncWind);
+document.getElementById('btn-gust').addEventListener('click', () => {
+  // Inject a quick world-frame velocity impulse (~3 m/s in a random horizontal
+  // direction, plus a small vertical kick) — instantly visible on the scope.
+  const a = Math.random() * Math.PI * 2;
+  physics.applyImpulse(new THREE.Vector3(Math.cos(a) * 3, (Math.random() - 0.3) * 1.5, Math.sin(a) * 3));
+  Sound.beep();
+});
+
+// Telemetry scopes.
+const scopeAlt = new TelemetryPlot(
+  document.getElementById('scope-alt'),
+  [{ name: 'alt', color: '#4ea1ff' }, { name: 'target', color: '#ffae42' }],
+);
+const scopeRPY = new TelemetryPlot(
+  document.getElementById('scope-rpy'),
+  [{ name: 'roll', color: '#ef5350' }, { name: 'pitch', color: '#66bb6a' }, { name: 'yaw', color: '#4ea1ff' }],
+);
+const scopeMotors = new TelemetryPlot(
+  document.getElementById('scope-motors'),
+  Array.from({ length: physics.numMotors }, (_, i) => ({
+    name: `M${i}`,
+    color: ['#4ea1ff','#ffae42','#ef5350','#66bb6a','#ab47bc','#26c6da','#ffd54f','#ff80ab'][i % 8],
+  })),
+  { yMin: 0 },
+);
+let telemetryT = 0;
+
 // -------------------------------------------------------------------------
 // Path line.
 // -------------------------------------------------------------------------
@@ -393,7 +461,6 @@ const hud = {
   alt: document.getElementById('hud-alt'),
   vel: document.getElementById('hud-vel'),
   rpy: document.getElementById('hud-rpy'),
-  gps: document.getElementById('hud-gps'),
   hp:  document.getElementById('hud-hp'),
   status: document.getElementById('status-block'),
 };
@@ -405,8 +472,6 @@ function tickHUD() {
   const e = physics.getEuler();
   const deg = (r) => (r * 180 / Math.PI).toFixed(0);
   hud.rpy.textContent = `${deg(e.roll)} ${deg(e.pitch)} ${deg(e.yaw)}`;
-  const ll = terrain.toLatLon(physics.position.x, physics.position.z);
-  hud.gps.textContent = `${ll.lat.toFixed(5)}, ${ll.lon.toFixed(5)}`;
   hud.hp.textContent = Math.max(0, Math.round(physics.hp));
   hud.hp.style.color = physics.hp > 60 ? 'var(--ok)' : physics.hp > 25 ? 'var(--warn)' : 'var(--err)';
   hud.status.textContent = physics.wrecked ? 'WRECKED — press Reset' : (physics.armed ? 'Armed' : 'Disarmed');
@@ -519,9 +584,43 @@ function tick() {
   orbit.update();
   tickHUD();
 
-  const activeCam = sentry.equipped ? sentry.camera : camera;
-  renderer.render(scene, activeCam);
-  camRenderer.render(scene, droneCam);
+  // Telemetry sampling + render.
+  telemetryT += dt;
+  const eul = physics.getEuler();
+  const rad2deg = 180 / Math.PI;
+  scopeAlt.push(telemetryT, [physics.position.y, target.y]);
+  scopeRPY.push(telemetryT, [eul.roll * rad2deg, eul.pitch * rad2deg, eul.yaw * rad2deg]);
+  scopeMotors.push(telemetryT, physics.omega.slice());
+  scopeAlt.render();
+  scopeRPY.render();
+  scopeMotors.render();
+
+  // Choose which camera renders to the main viewport vs. the corner preview.
+  // Sentry mode wins; otherwise FPV mode swaps drone-cam and chase-cam.
+  const w = viewport.clientWidth, h = viewport.clientHeight;
+  let mainCam;
+  let previewCam;
+  if (sentry.equipped) {
+    mainCam = sentry.camera;
+    previewCam = droneCam;
+  } else if (fpvMode) {
+    mainCam = droneCam;
+    previewCam = camera;
+  } else {
+    mainCam = camera;
+    previewCam = droneCam;
+  }
+  // Aspect-fit: the main renderer fills the viewport, the preview is fixed 320x200.
+  if (mainCam.aspect !== w / h) {
+    mainCam.aspect = w / h;
+    mainCam.updateProjectionMatrix();
+  }
+  if (previewCam.aspect !== 320 / 200) {
+    previewCam.aspect = 320 / 200;
+    previewCam.updateProjectionMatrix();
+  }
+  renderer.render(scene, mainCam);
+  camRenderer.render(scene, previewCam);
 
   requestAnimationFrame(tick);
 }
@@ -531,18 +630,68 @@ function tick() {
 // (we don't block on it — the drone can fly while elevation loads).
 // -------------------------------------------------------------------------
 
-window.addEventListener('resize', () => {
+// Drive renderer.setSize from the viewport's actual layout size (not just
+// window resize) — fixes the case where the canvas was sized at boot before
+// CSS layout settled, leaving the FPV view rendering at the wrong resolution
+// and looking like it only fills part of the screen.
+function resizeMain() {
   const w = viewport.clientWidth, h = viewport.clientHeight;
-  renderer.setSize(w, h);
-  camera.aspect = w / h;
-  camera.updateProjectionMatrix();
+  if (w === 0 || h === 0) return;
+  renderer.setSize(w, h, true);
   sentry.camera.aspect = w / h;
   sentry.camera.updateProjectionMatrix();
-});
+}
+window.addEventListener('resize', resizeMain);
+new ResizeObserver(resizeMain).observe(viewport);
+resizeMain();
 
 // First spawn at origin once the scene is up.
 spawnDrone(new THREE.Vector2(0, 0));
 tick();
 Loading.hide(400);
 
-window.drone = { physics, controller, terrain, sentry, waypoints };
+// Public scripting API. Usage from the JS console:
+//   drone.setTarget({ altitude: 4, yaw: 1.57 })
+//   drone.setTarget({ x: 5, z: -3, altitude: 2 })
+//   drone.setWind(2, 0)        // m/s in world X/Z
+//   drone.gust()               // random horizontal kick
+//   drone.setGravity(false)    // toggle gravity off
+//   drone.reset()              // respawn drone in place
+function setTarget(opts = {}) {
+  if (typeof opts.x === 'number') target.x = opts.x;
+  if (typeof opts.z === 'number') target.z = opts.z;
+  if (typeof opts.altitude === 'number') target.y = opts.altitude;
+  if (typeof opts.y === 'number') target.y = opts.y;
+  controller.setTarget(target);
+  if (typeof opts.yaw === 'number') controller.targetYaw = opts.yaw;
+  // Pitch/roll are stabilized outputs of the position/velocity loops; we
+  // accept them in the API for spec-completeness but log when ignored.
+  if (typeof opts.pitch === 'number' || typeof opts.roll === 'number') {
+    console.info('drone.setTarget: pitch/roll are stabilized outputs, ignored. Use drone.controller.maxTilt to change lean limits.');
+  }
+}
+
+window.drone = {
+  physics,
+  controller,
+  terrain,
+  sentry,
+  waypoints,
+  setTarget,
+  setWind: (x, z) => {
+    physics.wind.set(x, 0, z);
+    windX.value = x; windZ.value = z;
+    windXv.textContent = x.toFixed(1); windZv.textContent = z.toFixed(1);
+  },
+  gust: (vx, vy, vz) => {
+    if (vx === undefined) {
+      const a = Math.random() * Math.PI * 2;
+      physics.applyImpulse(new THREE.Vector3(Math.cos(a) * 3, (Math.random() - 0.3) * 1.5, Math.sin(a) * 3));
+    } else {
+      physics.applyImpulse(new THREE.Vector3(vx, vy ?? 0, vz ?? 0));
+    }
+  },
+  setGravity: (on) => { physics.gravityEnabled = !!on; envGravity.checked = !!on; },
+  setDrag: (on) => { physics.dragEnabled = !!on; envDrag.checked = !!on; },
+  reset: () => spawnDrone(new THREE.Vector2(physics.position.x, physics.position.z)),
+};

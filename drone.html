@@ -160,7 +160,26 @@
   }
   .mode-pill.active { color: var(--ok); border: 1px solid var(--ok); }
 
-  #addr-input { width: 100%; }
+  .scope {
+    width: 100%;
+    height: 110px;
+    background: #0a0e14;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    display: block;
+    margin-bottom: 6px;
+  }
+  .scope-title {
+    font: 11px monospace;
+    color: var(--fg-dim);
+    margin: 4px 0 2px 0;
+  }
+  .env-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 4px; }
+  .env-row label { font-size: 12px; }
+  .env-slider { display: grid; grid-template-columns: 56px 1fr 36px; gap: 4px; align-items: center; margin-bottom: 2px; }
+  .env-slider .lbl { font-size: 11px; color: var(--fg-dim); }
+  .env-slider input[type="range"] { width: 100%; }
+  .env-slider .v { font: 11px monospace; color: var(--ok); text-align: right; }
 
   .topbar-theme input[type="color"] { width: 24px; height: 24px; }
   .sound-toggle { color: var(--fg-dim); font-size: 11px; display: inline-flex; gap: 4px; align-items: center; }
@@ -179,6 +198,7 @@
     <a class="topbar-link" href="about.html">About</a>
     <button id="btn-reset">Reset Drone</button>
     <button id="btn-place">Place Drone</button>
+    <button id="btn-fpv" title="First-person view (V)">FPV</button>
     <span style="width:1px; height:18px; background:var(--border); margin:0 4px;"></span>
     <button id="btn-sentry" class="danger">Equip Sentry</button>
     <span style="width:1px; height:18px; background:var(--border); margin:0 4px;"></span>
@@ -200,7 +220,6 @@
       <div class="row"><span class="lbl">ALT</span> <span class="val" id="hud-alt">-</span></div>
       <div class="row"><span class="lbl">VEL</span> <span class="val" id="hud-vel">-</span></div>
       <div class="row"><span class="lbl">RPY</span> <span class="val" id="hud-rpy">-</span></div>
-      <div class="row"><span class="lbl">GPS</span> <span class="val" id="hud-gps">-</span></div>
       <div class="row"><span class="lbl">HP</span> <span class="val" id="hud-hp">100</span></div>
     </div>
     <div id="cam-feed">
@@ -212,17 +231,6 @@
   <aside id="right-panel">
 
     <div class="panel-section">
-      <h3>Location</h3>
-      <input type="text" id="addr-input" placeholder="Address, city, or 'lat, lon'" />
-      <div class="row" style="margin-top:6px;">
-        <button id="btn-geocode" class="primary">Fly to address</button>
-        <span class="mode-pill" id="addr-status">Ready</span>
-      </div>
-      <div class="hint" id="addr-current">Origin: San Francisco, CA (default)</div>
-      <div class="hint">Map tiles &copy; OpenStreetMap contributors. Terrain is flat (3D elevation requires a paid tile service).</div>
-    </div>
-
-    <div class="panel-section">
       <h3>Flight Mode</h3>
       <div class="row">
         <button id="mode-hover">Hover</button>
@@ -230,8 +238,9 @@
         <button id="mode-mission">Run Mission</button>
       </div>
       <div class="hint">
-        <b>WASD</b> = move, <b>Q/E</b> = yaw, <b>Shift</b>/<b>Ctrl</b> = up/down. Click the map in Hover mode to set a target.
-        Press <b>G</b> any time to toggle the sentry gun.
+        <b>Left stick (WASD):</b> W/S throttle, A/D yaw.<br />
+        <b>Right stick (arrows):</b> &uarr;/&darr; pitch, &larr;/&rarr; roll (body-relative).<br />
+        <b>V</b> = toggle FPV. <b>G</b> = sentry. Click the city in Hover mode to set a target.
       </div>
     </div>
 
@@ -254,6 +263,35 @@
       <h3>PID Tuning</h3>
       <div id="pid-blocks"></div>
       <button id="btn-pid-reset">Reset to defaults</button>
+    </div>
+
+    <div class="panel-section">
+      <h3>Environment</h3>
+      <div class="env-row">
+        <label><input type="checkbox" id="env-gravity" checked /> Gravity</label>
+        <label><input type="checkbox" id="env-drag" checked /> Drag</label>
+      </div>
+      <div class="env-slider">
+        <span class="lbl">Wind X</span>
+        <input type="range" id="wind-x" min="-8" max="8" step="0.1" value="0" />
+        <span class="v" id="wind-x-v">0.0</span>
+      </div>
+      <div class="env-slider">
+        <span class="lbl">Wind Z</span>
+        <input type="range" id="wind-z" min="-8" max="8" step="0.1" value="0" />
+        <span class="v" id="wind-z-v">0.0</span>
+      </div>
+      <button id="btn-gust">Random gust</button>
+    </div>
+
+    <div class="panel-section">
+      <h3>Telemetry</h3>
+      <div class="scope-title">Altitude (m)</div>
+      <canvas id="scope-alt" class="scope"></canvas>
+      <div class="scope-title">Roll / Pitch / Yaw (deg)</div>
+      <canvas id="scope-rpy" class="scope"></canvas>
+      <div class="scope-title">Motor speeds &omega; (rad/s)</div>
+      <canvas id="scope-motors" class="scope"></canvas>
     </div>
 
     <div class="panel-section">
