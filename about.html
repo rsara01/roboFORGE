@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoboForge - About the Creator</title>
+<style>
+  :root {
+    --accent: #667eea;
+    --accent-2: #764ba2;
+    --brand-grad: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    --orange: #f08327;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--brand-grad);
+    min-height: 100vh;
+    color: #1f2330;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 28px; color: white;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+  }
+  header .brand { display: flex; align-items: center; gap: 12px; }
+  header .brand img { height: 36px; }
+  header .brand strong { font-size: 18px; letter-spacing: 0.4px; }
+  header nav a {
+    color: white; text-decoration: none; margin-left: 16px; font-size: 13px;
+    padding: 6px 12px; border-radius: 6px; background: rgba(255,255,255,0.1);
+    transition: background 0.15s;
+  }
+  header nav a:hover { background: rgba(255,255,255,0.22); }
+
+  main {
+    max-width: 880px; margin: 40px auto; padding: 0 24px 60px;
+  }
+  .hero {
+    background: white;
+    border-radius: 18px;
+    padding: 48px 40px;
+    box-shadow: 0 18px 60px rgba(0,0,0,0.22);
+    margin-bottom: 24px;
+  }
+  .hero-row {
+    display: flex; gap: 28px; align-items: center; margin-bottom: 20px;
+  }
+  .hero-row .logo-wrap {
+    width: 140px; flex-shrink: 0;
+    background: #faf6f0; border-radius: 14px;
+    padding: 12px;
+  }
+  .hero-row .logo-wrap img { width: 100%; display: block; }
+  .hero-row .text h1 { font-size: 32px; margin-bottom: 6px; }
+  .hero-row .text .tag { color: #6c7280; font-size: 14px; }
+
+  .body-section { color: #2d3340; line-height: 1.7; }
+  .body-section h2 {
+    font-size: 18px; color: var(--orange);
+    text-transform: uppercase; letter-spacing: 1.2px;
+    margin: 24px 0 8px;
+  }
+  .body-section p { margin-bottom: 12px; font-size: 15px; }
+  .body-section ul { padding-left: 22px; margin-bottom: 16px; }
+  .body-section li { margin-bottom: 4px; font-size: 14px; }
+
+  .stack-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .stack-card {
+    background: #f4f6fb;
+    border: 1px solid #e3e8f0;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 13px;
+  }
+  .stack-card .label { color: #6c7280; font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
+  .stack-card .value { color: #1f2330; font-weight: 600; }
+
+  .cta {
+    text-align: center; margin-top: 28px;
+  }
+  .cta a {
+    display: inline-block;
+    background: var(--brand-grad);
+    color: white;
+    padding: 12px 28px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.18);
+    transition: transform 0.15s;
+  }
+  .cta a:hover { transform: translateY(-2px); }
+
+  footer {
+    text-align: center; color: rgba(255,255,255,0.75);
+    font-size: 12px; padding: 20px 0 30px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="./" class="brand" style="text-decoration:none; color:white;">
+    <img src="assets/logo-mark.svg" alt="RoboForge mark" />
+    <strong>RoboForge</strong>
+  </a>
+  <nav>
+    <a href="./">Dashboard</a>
+    <a href="about.html">About</a>
+  </nav>
+</header>
+
+<main>
+  <div class="hero">
+    <div class="hero-row">
+      <div class="logo-wrap">
+        <img src="assets/logo.svg" alt="RoboForge logo" />
+      </div>
+      <div class="text">
+        <h1>About RoboForge</h1>
+        <div class="tag">A browser-native robotics playground.</div>
+      </div>
+    </div>
+
+    <div class="body-section">
+      <h2>The project</h2>
+      <p>
+        RoboForge is a single-page robotics simulator that runs entirely in the
+        browser. It started as a 6-DOF robotic arm sandbox for building, scripting,
+        and testing pick-and-place behaviour, and has grown to include a full
+        quadrotor drone simulator with tunable PID, real-world map terrain, and
+        an exportable mission format that can fly a real vehicle.
+      </p>
+
+      <h2>The creator</h2>
+      <p>
+        Built by <strong>Rishik Saravanan</strong>. RoboForge is a personal
+        project to make robotics simulation approachable: no installs, no SITL
+        toolchains, no ROS setup. Open the page, build a robot, fly a drone.
+      </p>
+
+      <h2>What's inside</h2>
+      <div class="stack-grid">
+        <div class="stack-card"><div class="label">Render</div><div class="value">Three.js + WebGL2</div></div>
+        <div class="stack-card"><div class="label">Arm physics</div><div class="value">Custom rigid body + AABB stacking</div></div>
+        <div class="stack-card"><div class="label">Drone dynamics</div><div class="value">Quadrotor + cascaded PID</div></div>
+        <div class="stack-card"><div class="label">Geocoding</div><div class="value">OpenStreetMap Nominatim</div></div>
+        <div class="stack-card"><div class="label">Imagery</div><div class="value">OpenStreetMap raster tiles</div></div>
+        <div class="stack-card"><div class="label">Elevation</div><div class="value">AWS Mapzen Terrain Tiles</div></div>
+        <div class="stack-card"><div class="label">Audio</div><div class="value">WebAudio (synthesized)</div></div>
+        <div class="stack-card"><div class="label">Scripting</div><div class="value">Sandboxed JS host API</div></div>
+      </div>
+
+      <h2>Open data acknowledgements</h2>
+      <ul>
+        <li>Map imagery: &copy; OpenStreetMap contributors (ODbL).</li>
+        <li>Geocoding: Nominatim, run by the OSM Foundation.</li>
+        <li>Elevation: Mapzen Terrain Tiles, hosted by AWS Open Data.</li>
+        <li>3D library: Three.js by mrdoob and contributors (MIT).</li>
+      </ul>
+
+      <h2>Drone export target</h2>
+      <p>
+        Mission exports target <a href="https://dronekit-python.readthedocs.io/" style="color:var(--accent);">DroneKit-Python</a>.
+        Run the generated script against an ArduPilot SITL instance for safe testing,
+        or against a real vehicle once you've validated the trajectory in simulation.
+      </p>
+
+      <div class="cta">
+        <a href="./">Back to the simulator</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  RoboForge &middot; built by Rishik Saravanan
+</footer>
+
+</body>
+</html>

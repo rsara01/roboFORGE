@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoboForge - Dashboard</title>
+<style>
+  :root {
+    --accent: #667eea;
+    --accent-2: #764ba2;
+    --orange: #f08327;
+    --orange-soft: #ffb058;
+    --brand-grad: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--brand-grad);
+    min-height: 100vh;
+    color: #1f2330;
+    overflow-x: hidden;
+  }
+  /* Subtle floating shapes for visual interest. */
+  body::before, body::after {
+    content: ''; position: fixed; pointer-events: none;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.35;
+  }
+  body::before {
+    width: 360px; height: 360px;
+    background: var(--orange-soft);
+    top: -80px; right: -80px;
+  }
+  body::after {
+    width: 420px; height: 420px;
+    background: white;
+    bottom: -120px; left: -120px;
+    opacity: 0.18;
+  }
+
+  header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 36px; color: white; gap: 16px;
+    position: relative; z-index: 2;
+  }
+  header .brand { display: flex; align-items: center; gap: 12px; }
+  header .brand img { height: 44px; display: block; }
+  header .brand .name { font-size: 22px; font-weight: 800; letter-spacing: 1.2px; }
+  header .brand .sub { font-size: 11px; opacity: 0.85; letter-spacing: 0.4px; text-transform: uppercase; }
+  header nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  header nav a, header nav button {
+    color: white; text-decoration: none;
+    padding: 7px 14px; border-radius: 999px; font-size: 12px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    cursor: pointer; transition: background 0.15s;
+  }
+  header nav a:hover, header nav button:hover { background: rgba(255,255,255,0.28); }
+
+  .theme-bar {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.15);
+    padding: 4px 10px; border-radius: 999px;
+  }
+  .theme-bar input[type="color"] {
+    width: 22px; height: 22px; padding: 0;
+    border: 1px solid rgba(255,255,255,0.4); border-radius: 50%;
+    background: transparent; cursor: pointer;
+  }
+  .swatches { display: flex; gap: 4px; }
+  .swatch {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.5); cursor: pointer;
+  }
+  .swatch:hover { transform: scale(1.18); }
+
+  main {
+    max-width: 1100px; margin: 30px auto; padding: 0 24px 60px;
+    position: relative; z-index: 2;
+  }
+  .hero {
+    color: white; text-align: center; margin-bottom: 40px;
+  }
+  .hero h1 {
+    font-size: 38px; font-weight: 800; letter-spacing: 0.4px; margin-bottom: 8px;
+  }
+  .hero .lede {
+    font-size: 16px; opacity: 0.92; max-width: 560px; margin: 0 auto;
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
+    margin-bottom: 28px;
+  }
+  .action {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.18);
+    cursor: pointer;
+    transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+    display: flex; flex-direction: column; gap: 10px;
+    border: 2px solid transparent;
+    text-align: left;
+  }
+  .action:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 22px 56px rgba(0,0,0,0.26);
+    border-color: var(--accent);
+  }
+  .action .head {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .action .badge {
+    width: 46px; height: 46px;
+    border-radius: 12px;
+    background: var(--brand-grad);
+    color: white; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 20px;
+  }
+  .action h2 { font-size: 18px; color: #1f2330; }
+  .action p { color: #5b6473; font-size: 13px; line-height: 1.5; }
+  .action .meta {
+    margin-top: 4px; font-size: 11px; color: #6c7280;
+    text-transform: uppercase; letter-spacing: 0.6px;
+  }
+  .action.tagged { position: relative; }
+  .action.tagged::after {
+    content: 'NEW'; position: absolute; top: 14px; right: 14px;
+    background: var(--orange); color: white;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.6px;
+    padding: 2px 7px; border-radius: 999px;
+  }
+
+  .platforms {
+    background: white; border-radius: 16px;
+    padding: 22px 26px; box-shadow: 0 14px 40px rgba(0,0,0,0.16);
+  }
+  .platforms .head {
+    display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px;
+  }
+  .platforms h2 { font-size: 16px; }
+  .platforms .lede { font-size: 12px; color: #6c7280; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .tile {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 14px 10px;
+    background: #f4f6fb;
+    border-radius: 10px;
+    border: 1px solid #e3e8f0;
+    text-align: center;
+    opacity: 0.75;
+  }
+  .tile .glyph {
+    width: 38px; height: 38px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #9aa3b2 0%, #6c7280 100%);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+  }
+  .tile .name { font-weight: 600; color: #1f2330; font-size: 13px; }
+  .tile .status {
+    font-size: 10px; color: #6c7280;
+    text-transform: uppercase; letter-spacing: 0.6px;
+  }
+
+  footer {
+    text-align: center; color: rgba(255,255,255,0.85);
+    font-size: 12px; margin-top: 30px;
+  }
+  .file-input { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <img src="assets/logo-mark.svg" alt="RoboForge logo" />
+    <div>
+      <div class="name">ROBOFORGE</div>
+      <div class="sub">Robotics Simulator</div>
+    </div>
+  </div>
+  <nav>
+    <div class="theme-bar">
+      <input type="color" id="theme-accent" value="#667eea" title="Accent" />
+      <input type="color" id="theme-accent2" value="#764ba2" title="Edge" />
+      <span class="swatches" id="theme-swatches"></span>
+    </div>
+    <a href="about.html">About</a>
+  </nav>
+</header>
+
+<main>
+  <div class="hero">
+    <h1>Pick a simulator</h1>
+    <p class="lede">Build a robotic arm from scratch, fly a quadrotor over real-world map terrain, or load a saved project.</p>
+  </div>
+
+  <div class="actions">
+    <div class="action" id="act-arm">
+      <div class="head">
+        <div class="badge">ARM</div>
+        <h2>Robotic Arm</h2>
+      </div>
+      <p>Open the 6-DOF arm sandbox. Build joints, mount end effectors, run scripts, save to JSON.</p>
+      <div class="meta">Available</div>
+    </div>
+
+    <div class="action tagged" id="act-drone">
+      <div class="head">
+        <div class="badge">UAV</div>
+        <h2>Drone Simulator</h2>
+      </div>
+      <p>Fly a quadrotor with tunable PIDs over real 3D terrain. Trace flight paths and export the mission to a real drone.</p>
+      <div class="meta">Available</div>
+    </div>
+
+    <div class="action" id="act-load">
+      <div class="head">
+        <div class="badge">{ }</div>
+        <h2>Load Saved Project</h2>
+      </div>
+      <p>Open a saved <code>.json</code> robot configuration and jump straight back into the arm simulator.</p>
+      <div class="meta">From file</div>
+    </div>
+  </div>
+
+  <div class="platforms">
+    <div class="head">
+      <h2>Coming soon</h2>
+      <span class="lede">More platforms in development.</span>
+    </div>
+    <div class="grid">
+      <div class="tile">
+        <div class="glyph">HUM</div>
+        <div class="name">Humanoid</div>
+        <div class="status">Locked</div>
+      </div>
+      <div class="tile">
+        <div class="glyph">QUAD</div>
+        <div class="name">Quadruped</div>
+        <div class="status">Locked</div>
+      </div>
+      <div class="tile">
+        <div class="glyph">AGV</div>
+        <div class="name">Mobile Base</div>
+        <div class="status">Locked</div>
+      </div>
+      <div class="tile">
+        <div class="glyph">SUB</div>
+        <div class="name">Submersible</div>
+        <div class="status">Locked</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span>Made by Rishik Saravanan &middot; <a href="about.html" style="color:white;">About the project</a></span>
+  </footer>
+</main>
+
+<input type="file" id="json-input" class="file-input" accept=".json" />
+
+<script type="module">
+  import { Theme } from './js/theme.js';
+  import { Sound } from './js/sound.js';
+
+  const fileInput = document.getElementById('json-input');
+  const accentEl = document.getElementById('theme-accent');
+  const accent2El = document.getElementById('theme-accent2');
+  const swatchesEl = document.getElementById('theme-swatches');
+
+  const t = Theme.load();
+  accentEl.value = t.accent;
+  accent2El.value = t.accent2;
+
+  const PRESETS = [
+    { a: '#667eea', b: '#764ba2', name: 'Indigo' },
+    { a: '#11998e', b: '#38ef7d', name: 'Emerald' },
+    { a: '#ee0979', b: '#ff6a00', name: 'Sunset' },
+    { a: '#2193b0', b: '#6dd5ed', name: 'Ocean' },
+    { a: '#373b44', b: '#4286f4', name: 'Steel' },
+    { a: '#c31432', b: '#240b36', name: 'Crimson' },
+  ];
+  for (const p of PRESETS) {
+    const el = document.createElement('span');
+    el.className = 'swatch';
+    el.style.background = `linear-gradient(135deg, ${p.a}, ${p.b})`;
+    el.title = p.name;
+    el.addEventListener('click', () => {
+      accentEl.value = p.a;
+      accent2El.value = p.b;
+      Theme.set({ accent: p.a, accent2: p.b });
+      Sound.click();
+    });
+    swatchesEl.appendChild(el);
+  }
+  accentEl.addEventListener('input', () => Theme.set({ accent: accentEl.value }));
+  accent2El.addEventListener('input', () => Theme.set({ accent2: accent2El.value }));
+
+  // Action wiring — each button has exactly one destination.
+  document.getElementById('act-arm').addEventListener('click', () => {
+    sessionStorage.removeItem('pendingImportJSON');
+    Sound.ok();
+    window.location.href = 'arm.html?action=new';
+  });
+  document.getElementById('act-drone').addEventListener('click', () => {
+    Sound.ok();
+    window.location.href = '/drone.html';
+  });
+  document.getElementById('act-load').addEventListener('click', () => {
+    Sound.click();
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', async (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    try {
+      const text = await f.text();
+      JSON.parse(text);
+      sessionStorage.setItem('pendingImportJSON', text);
+      sessionStorage.setItem('pendingImportName', f.name);
+      Sound.ok();
+      window.location.href = 'arm.html?action=import';
+    } catch (err) {
+      Sound.err();
+      alert('That file is not valid JSON: ' + err.message);
+      fileInput.value = '';
+    }
+  });
+</script>
+</body>
+</html>

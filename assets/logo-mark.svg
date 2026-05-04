@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 280" role="img" aria-label="RoboForge mark">
+  <defs>
+    <linearGradient id="m_armGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b8c6d4"/>
+      <stop offset="1" stop-color="#7c8a98"/>
+    </linearGradient>
+    <linearGradient id="m_baseGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#94a4b3"/>
+      <stop offset="1" stop-color="#5d6c7a"/>
+    </linearGradient>
+    <radialGradient id="m_orangeGrad" cx="0.4" cy="0.4" r="0.7">
+      <stop offset="0" stop-color="#ffb058"/>
+      <stop offset="1" stop-color="#f08327"/>
+    </radialGradient>
+  </defs>
+  <g transform="translate(110 110)">
+    <path fill="url(#m_orangeGrad)" d="
+      M 0 -90  L 17 -58 L 48 -68 L 42 -38
+      L 76 -28 L 58 -6  L 88 14
+      L 58 28  L 76 58  L 42 52
+      L 48 82  L 17 74  L 0 104
+      L -17 74 L -48 82 L -42 52
+      L -76 58 L -58 28 L -88 14
+      L -58 -6 L -76 -28 L -42 -38
+      L -48 -68 L -17 -58 Z"/>
+  </g>
+  <circle cx="110" cy="170" r="26" fill="url(#m_armGrad)" stroke="#4d5965" stroke-width="3"/>
+  <circle cx="110" cy="170" r="11" fill="#f08327"/>
+  <rect x="98" y="96" width="30" height="80" rx="11" fill="url(#m_armGrad)" stroke="#4d5965" stroke-width="3" transform="rotate(-20 113 136)"/>
+  <circle cx="170" cy="84" r="17" fill="url(#m_armGrad)" stroke="#4d5965" stroke-width="3"/>
+  <circle cx="170" cy="84" r="6" fill="#f08327"/>
+  <rect x="164" y="72" width="86" height="24" rx="9" fill="url(#m_armGrad)" stroke="#4d5965" stroke-width="3"/>
+  <circle cx="246" cy="84" r="14" fill="url(#m_armGrad)" stroke="#4d5965" stroke-width="3"/>
+  <rect x="234" y="92" width="32" height="32" rx="3" fill="url(#m_armGrad)" stroke="#4d5965" stroke-width="3"/>
+  <path d="M 234 124 L 226 148 L 234 152 Z" fill="url(#m_armGrad)" stroke="#4d5965" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M 266 124 L 274 148 L 266 152 Z" fill="url(#m_armGrad)" stroke="#4d5965" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M 60 200 L 160 200 L 148 232 L 72 232 Z"
+        fill="url(#m_baseGrad)" stroke="#4d5965" stroke-width="3" stroke-linejoin="round"/>
+</svg>
