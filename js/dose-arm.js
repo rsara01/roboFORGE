@@ -8,16 +8,21 @@ export class ScaraArm {
     this.handles = meshHandles;
     this.q1 = 0;
     this.q2 = 0;
+    this.lift = 0;
     this.z  = 0;
     this.gripper = 0;
 
+    this.targetX = 0;
+    this.targetY = 0;
     this.targetQ1 = 0;
     this.targetQ2 = 0;
+    this.targetLift = 0;
     this.targetZ  = 0;
     this.targetGrip = 0;
 
     this.q1Speed = 1.5;
     this.q2Speed = 1.8;
+    this.liftSpeed = 0.45;
     this.zSpeed  = 0.4;
     this.gripSpeed = 4.0;
 
@@ -27,8 +32,11 @@ export class ScaraArm {
   }
 
   reset() {
-    this.q1 = this.q2 = this.z = this.gripper = 0;
-    this.targetQ1 = this.targetQ2 = this.targetZ = this.targetGrip = 0;
+    this.q1 = this.q2 = this.lift = this.z = this.gripper = 0;
+    const pose = this.toolLocalPose();
+    this.targetX = pose.x;
+    this.targetY = pose.y;
+    this.targetQ1 = this.targetQ2 = this.targetLift = this.targetZ = this.targetGrip = 0;
     this.attached = null;
   }
 
@@ -55,6 +63,8 @@ export class ScaraArm {
 
   setIKTarget(localX, localY, localZ) {
     const sol = this.ikLocal(localX, localY, localZ);
+    this.targetX = localX;
+    this.targetY = localY;
     this.targetQ1 = sol.q1;
     this.targetQ2 = sol.q2;
     this.targetZ  = sol.z;
@@ -69,7 +79,7 @@ export class ScaraArm {
     const L1 = DOSE_DIMS.L1, L2 = DOSE_DIMS.L2;
     const x = L1 * Math.cos(this.q1) + L2 * Math.cos(this.q1 + this.q2);
     const y = L1 * Math.sin(this.q1) + L2 * Math.sin(this.q1 + this.q2);
-    return { x, y, z: this.z };
+    return { x, y, lift: this.lift, z: this.z };
   }
 
   step(dt) {
@@ -81,9 +91,12 @@ export class ScaraArm {
     };
     this.q1 = stepTo(this.q1, this.targetQ1, this.q1Speed);
     this.q2 = stepTo(this.q2, this.targetQ2, this.q2Speed);
+    this.lift = stepTo(this.lift, this.targetLift, this.liftSpeed);
     this.z  = stepTo(this.z,  this.targetZ,  this.zSpeed);
     this.gripper = stepTo(this.gripper, this.targetGrip, this.gripSpeed);
 
+    if (this.handles.liftSlide) this.handles.liftSlide.position.y =
+      (DOSE_DIMS.wheelR + DOSE_DIMS.baseH + DOSE_DIMS.shoulderHeight) + this.lift;
     this.handles.armYaw.rotation.y = -this.q1;
     this.handles.elbow.rotation.y = -this.q2;
     this.handles.zSlide.position.y = this.z;
@@ -96,31 +109,31 @@ export class ScaraArm {
   isAtTarget(tol = 0.04) {
     return Math.abs(this.q1 - this.targetQ1) < tol &&
            Math.abs(this.q2 - this.targetQ2) < tol &&
+           Math.abs(this.lift - this.targetLift) < 0.01 &&
            Math.abs(this.z  - this.targetZ ) < 0.01;
   }
 
-  toolWorldPosition(robotPos, robotHeading) {
-    const D = DOSE_DIMS;
-    const local = this.toolLocalPose();
-    const shoulderY = D.wheelRadius ?? 0.115;
-    const baseTopY = (D.wheelR + D.baseH);
-    const shoulderWorldY = baseTopY + D.shoulderHeight;
-    const shoulderLocalZ = -D.baseD / 2 + D.mastW / 2 + 0.02;
-
-    const cosH = Math.cos(robotHeading);
-    const sinH = Math.sin(robotHeading);
-    const lx = local.x, lz = -shoulderLocalZ - 0.0;
-
-    const armX = local.x;
-    const armZ = -shoulderLocalZ + 0;
-
-    const px = robotPos.x + (armX) * sinH + 0;
-    const pz = robotPos.z + (armX) * cosH + 0;
-    const py = shoulderWorldY + local.z - 0.10;
-
+  toolWorldPosition() {
     const out = new THREE.Vector3();
     this.handles.tool.getWorldPosition(out);
     out.y -= 0.10;
     return out;
+  }
+
+  snapshot() {
+    return {
+      q1: this.q1, q2: this.q2,
+      lift: this.lift, z: this.z,
+      grip: this.gripper,
+    };
+  }
+
+  applySnapshot(s) {
+    if (!s) return;
+    this.targetQ1 = this.q1 = s.q1 ?? 0;
+    this.targetQ2 = this.q2 = s.q2 ?? 0;
+    this.targetLift = this.lift = s.lift ?? 0;
+    this.targetZ = this.z = s.z ?? 0;
+    this.targetGrip = this.gripper = s.grip ?? 0;
   }
 }

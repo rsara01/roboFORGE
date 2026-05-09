@@ -30,7 +30,8 @@ export const DOSE_DIMS = {
   wheelW: 0.055,
   mastH: 1.45,
   mastW: 0.10,
-  shoulderHeight: 0.95,
+  shoulderHeight: 0.55,
+  liftRange: 0.55,
   L1: 0.36,
   L2: 0.30,
   zRange: 0.32,
@@ -113,10 +114,22 @@ export function buildDoseMesh() {
   headGroup.position.set(0, D.wheelR + D.baseH + D.mastH - 0.05, -D.baseD / 2 + D.mastW + 0.04);
   chassis.add(headGroup);
 
+  const liftSlide = new THREE.Group();
+  liftSlide.name = 'lift-slide';
+  liftSlide.position.set(0, D.wheelR + D.baseH + D.shoulderHeight, -D.baseD / 2 + D.mastW / 2 + 0.02);
+  chassis.add(liftSlide);
+
+  const liftCarriage = new THREE.Mesh(
+    new THREE.BoxGeometry(0.16, 0.10, 0.10),
+    counterMat
+  );
+  liftCarriage.position.z = 0.03;
+  liftCarriage.castShadow = true;
+  liftSlide.add(liftCarriage);
+
   const shoulderHub = new THREE.Group();
   shoulderHub.name = 'shoulder-hub';
-  shoulderHub.position.set(0, D.wheelR + D.baseH + D.shoulderHeight, -D.baseD / 2 + D.mastW / 2 + 0.02);
-  chassis.add(shoulderHub);
+  liftSlide.add(shoulderHub);
 
   const shoulderRing = new THREE.Mesh(
     new THREE.CylinderGeometry(0.07, 0.07, 0.05, 20),
@@ -208,6 +221,7 @@ export function buildDoseMesh() {
     leftWheel, rightWheel, caster,
     head: headGroup,
     headScreen,
+    liftSlide,
     shoulder: shoulderHub,
     armYaw,
     elbow,

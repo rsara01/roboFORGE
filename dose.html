@@ -123,7 +123,7 @@
 <main id="app">
   <div id="stage">
     <div id="hud">
-      <b>WASD</b> drive &nbsp;&nbsp; <b>Q/E</b> arm yaw &nbsp;&nbsp; <b>R/F</b> z-lift &nbsp;&nbsp; <b>Z/X</b> gripper<br/>
+      <b>Arrows</b> drive &nbsp; <b>WASD</b> arm tip &nbsp; <b>Q/E</b> yaw &nbsp; <b>T/G</b> mast lift &nbsp; <b>R/F</b> wrist Z &nbsp; <b>Z/X</b> gripper<br/>
       <span id="hud-pose">x: 0.00  z: 0.00  yaw: 0.00</span>
     </div>
   </div>
@@ -146,12 +146,31 @@
     <div class="panel-section">
       <h3>Controls</h3>
       <p class="hint">
-        <kbd>W</kbd>/<kbd>S</kbd> forward and reverse.<br/>
-        <kbd>A</kbd>/<kbd>D</kbd> turn left and right.<br/>
-        <kbd>Q</kbd>/<kbd>E</kbd> rotate the arm at the shoulder.<br/>
+        <kbd>Arrow keys</kbd> drive chassis.<br/>
+        <kbd>W</kbd>/<kbd>S</kbd> move arm forward/back in local plane.<br/>
+        <kbd>A</kbd>/<kbd>D</kbd> move arm left/right in local plane.<br/>
+        <kbd>Q</kbd>/<kbd>E</kbd> rotate the arm shoulder.<br/>
+        <kbd>T</kbd>/<kbd>G</kbd> raise and lower the whole arm on the mast.<br/>
         <kbd>R</kbd>/<kbd>F</kbd> raise and lower the wrist.<br/>
         <kbd>Z</kbd>/<kbd>X</kbd> close and open the gripper.
       </p>
+    </div>
+    <div class="panel-section">
+      <h3>Motion Recording</h3>
+      <div class="row">
+        <button id="btn-record-dose">Record</button>
+        <button id="btn-stop-dose">Stop</button>
+      </div>
+      <div class="row">
+        <button id="btn-play-dose">Play sim</button>
+        <button id="btn-stop-play-dose">Stop play</button>
+      </div>
+      <div class="row">
+        <button id="btn-export-dose-json">Export JSON</button>
+        <button id="btn-export-dose-arduino">Export Arduino</button>
+      </div>
+      <label class="row">Time scale: <input id="dose-time-scale" type="range" min="0.1" max="1" step="0.05" value="1" /> <span id="dose-scale-value">1.00x</span></label>
+      <p class="hint">Record motion, play it back, then export a coordinate matrix plus an Arduino sketch driving BLDC ESCs. Time scale only goes down (1.0x = recorded speed; 0.1x = slow-motion).</p>
     </div>
   </aside>
 </main>

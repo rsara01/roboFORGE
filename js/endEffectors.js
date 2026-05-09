@@ -151,8 +151,7 @@ function makeSuction() {
   stem.position.y = 0.04;
   stem.castShadow = stem.receiveShadow = true;
   group.add(stem);
-
-  const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.04, 24), cupMat);
+    const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.04, 24), cupMat);
   cup.position.y = 0.10;
   cup.castShadow = cup.receiveShadow = true;
   group.add(cup);
