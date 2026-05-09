@@ -176,7 +176,117 @@
     text-align: center; color: rgba(255,255,255,0.85);
     font-size: 12px; margin-top: 30px;
   }
+  footer a { color: white; text-decoration: underline; text-underline-offset: 2px; }
   .file-input { display: none; }
+
+  /* --- Welcome overlay (first visit only) --- */
+  #welcome {
+    position: fixed; inset: 0; z-index: 50;
+    background: var(--brand-grad);
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.45s ease;
+  }
+  #welcome.hide { opacity: 0; pointer-events: none; }
+  #welcome .card {
+    text-align: center; color: white; padding: 40px 56px;
+    max-width: 520px; animation: pop 0.55s ease-out both;
+  }
+  #welcome .logo {
+    width: 96px; height: 96px; border-radius: 24px;
+    background: rgba(255,255,255,0.95); padding: 12px;
+    margin: 0 auto 18px; display: block;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.25);
+  }
+  #welcome h1 {
+    font-size: 42px; font-weight: 800; letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+  #welcome p { font-size: 15px; opacity: 0.92; line-height: 1.55; margin-bottom: 28px; }
+  #welcome button {
+    background: white; color: var(--accent);
+    border: none; border-radius: 999px;
+    padding: 12px 38px; font-size: 15px; font-weight: 700;
+    letter-spacing: 0.6px; cursor: pointer;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.22);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  #welcome button:hover { transform: translateY(-2px); box-shadow: 0 18px 40px rgba(0,0,0,0.28); }
+  @keyframes pop {
+    from { opacity: 0; transform: translateY(14px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* --- Loading screen --- */
+  #loader {
+    position: fixed; inset: 0; z-index: 60;
+    background: var(--brand-grad);
+    display: none; align-items: center; justify-content: center;
+    flex-direction: column; gap: 18px;
+    transition: opacity 0.45s ease;
+  }
+  #loader.show { display: flex; }
+  #loader.hide { opacity: 0; pointer-events: none; }
+  #loader .ring {
+    width: 56px; height: 56px;
+    border: 4px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  #loader .label {
+    color: white; font-size: 13px; letter-spacing: 1.5px;
+    text-transform: uppercase; opacity: 0.9;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* --- Password modal --- */
+  #pw-modal {
+    position: fixed; inset: 0; z-index: 70;
+    background: rgba(12, 16, 30, 0.55);
+    backdrop-filter: blur(6px);
+    display: none; align-items: center; justify-content: center;
+  }
+  #pw-modal.show { display: flex; }
+  #pw-modal .panel {
+    background: white; border-radius: 16px;
+    padding: 28px 32px; width: 360px; max-width: 92vw;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.35);
+    animation: pop 0.25s ease-out both;
+  }
+  #pw-modal h2 { font-size: 20px; margin-bottom: 4px; color: #1f2330; }
+  #pw-modal .lede { font-size: 13px; color: #5b6473; line-height: 1.55; margin-bottom: 16px; }
+  #pw-modal label { display: block; font-size: 12px; color: #5b6473; margin-bottom: 6px; letter-spacing: 0.4px; }
+  #pw-modal input {
+    width: 100%; border: 1px solid #d9dde6; border-radius: 10px;
+    padding: 12px 14px; font-size: 14px; outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  #pw-modal input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(102,126,234,0.18); }
+  #pw-modal .err {
+    display: none; color: #c0392b; font-size: 12px;
+    margin-top: 8px; line-height: 1.45;
+  }
+  #pw-modal .err.show { display: block; }
+  #pw-modal .row {
+    display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px;
+  }
+  #pw-modal button {
+    border-radius: 10px; padding: 9px 18px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: 1px solid transparent;
+    transition: transform 0.12s, background 0.12s;
+  }
+  #pw-modal button.cancel {
+    background: #f2f4f9; color: #1f2330; border-color: #e3e8f0;
+  }
+  #pw-modal button.cancel:hover { background: #e6eaf3; }
+  #pw-modal button.primary {
+    background: var(--brand-grad); color: white; border: none;
+  }
+  #pw-modal button.primary:hover { transform: translateY(-1px); }
+
+  /* Polish: 'Coming soon' tiles — keep glyphs consistent length. */
+  .tile .glyph { letter-spacing: 0.3px; padding: 0 4px; min-width: 38px; }
+  .tile .name { line-height: 1.25; }
 </style>
 </head>
 <body>
@@ -261,7 +371,7 @@
       </div>
       <div class="tile">
         <div class="glyph">AGV</div>
-        <div class="name">Mobile Base</div>
+        <div class="name">Mobile&nbsp;Base</div>
         <div class="status">Locked</div>
       </div>
       <div class="tile">
@@ -278,6 +388,34 @@
 </main>
 
 <input type="file" id="json-input" class="file-input" accept=".json" />
+
+<div id="welcome" hidden>
+  <div class="card">
+    <img class="logo" src="assets/logo-mark.svg" alt="RoboForge logo" />
+    <h1>Welcome to RoboForge</h1>
+    <p>A browser-native sandbox for robotic arms, drones, and a hospital dose robot. Build it, drive it, record motion, export Arduino code.</p>
+    <button id="welcome-enter" type="button">Enter</button>
+  </div>
+</div>
+
+<div id="loader" aria-live="polite">
+  <div class="ring" role="status"></div>
+  <div class="label">Loading dashboard…</div>
+</div>
+
+<div id="pw-modal" role="dialog" aria-modal="true" aria-labelledby="pw-title">
+  <div class="panel">
+    <h2 id="pw-title">Dose simulator</h2>
+    <p class="lede">This sim is gated. Enter the access code to launch the hospital dose robot.</p>
+    <label for="pw-input">Access code</label>
+    <input id="pw-input" type="password" autocomplete="off" placeholder="••••" />
+    <div class="err" id="pw-err">That code didn't match. Try again.</div>
+    <div class="row">
+      <button class="cancel" id="pw-cancel" type="button">Cancel</button>
+      <button class="primary" id="pw-submit" type="button">Unlock</button>
+    </div>
+  </div>
+</div>
 
 <script type="module">
   import { Theme } from './js/theme.js';
@@ -316,26 +454,81 @@
   accentEl.addEventListener('input', () => Theme.set({ accent: accentEl.value }));
   accent2El.addEventListener('input', () => Theme.set({ accent2: accent2El.value }));
 
-  // Action wiring — each button has exactly one destination.
+  // ----- Welcome (first-visit) + load screen -----
+  const WELCOME_KEY = 'roboforge.seenWelcome';
+  const welcome = document.getElementById('welcome');
+  const loader = document.getElementById('loader');
+  const enterBtn = document.getElementById('welcome-enter');
+  if (!localStorage.getItem(WELCOME_KEY)) {
+    welcome.hidden = false;
+  }
+  enterBtn.addEventListener('click', () => {
+    Sound.ok();
+    localStorage.setItem(WELCOME_KEY, '1');
+    welcome.classList.add('hide');
+    loader.classList.add('show');
+    setTimeout(() => {
+      welcome.hidden = true;
+      loader.classList.add('hide');
+      setTimeout(() => loader.classList.remove('show', 'hide'), 500);
+    }, 900);
+  });
+
+  function navigate(url) {
+    loader.classList.add('show');
+    requestAnimationFrame(() => {
+      setTimeout(() => { window.location.href = url; }, 250);
+    });
+  }
+
+  // ----- Password modal for the dose sim -----
+  const DOSE_PASSWORD = 'dose';
+  const pwModal = document.getElementById('pw-modal');
+  const pwInput = document.getElementById('pw-input');
+  const pwErr = document.getElementById('pw-err');
+  const pwSubmit = document.getElementById('pw-submit');
+  const pwCancel = document.getElementById('pw-cancel');
+
+  function openPwModal() {
+    pwInput.value = '';
+    pwErr.classList.remove('show');
+    pwModal.classList.add('show');
+    setTimeout(() => pwInput.focus(), 30);
+  }
+  function closePwModal() { pwModal.classList.remove('show'); }
+  function tryPw() {
+    if (pwInput.value === DOSE_PASSWORD) {
+      Sound.ok();
+      closePwModal();
+      navigate('dose.html');
+    } else {
+      Sound.err();
+      pwErr.classList.add('show');
+      pwInput.select();
+    }
+  }
+  pwSubmit.addEventListener('click', tryPw);
+  pwCancel.addEventListener('click', () => { Sound.click(); closePwModal(); });
+  pwInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') tryPw();
+    if (e.key === 'Escape') closePwModal();
+    pwErr.classList.remove('show');
+  });
+  pwModal.addEventListener('click', (e) => { if (e.target === pwModal) closePwModal(); });
+
+  // ----- Action wiring -----
   document.getElementById('act-arm').addEventListener('click', () => {
     sessionStorage.removeItem('pendingImportJSON');
     Sound.ok();
-    window.location.href = 'arm.html?action=new';
+    navigate('arm.html?action=new');
   });
   document.getElementById('act-drone').addEventListener('click', () => {
     Sound.ok();
-    window.location.href = 'drone.html';
+    navigate('drone.html');
   });
   document.getElementById('act-dose').addEventListener('click', () => {
-    const entered = prompt('Dose simulator is locked. Enter password:');
-    if (entered === null) return;
-    if (entered !== 'dose') {
-      Sound.err();
-      alert('Wrong password.');
-      return;
-    }
-    Sound.ok();
-    window.location.href = 'dose.html';
+    Sound.click();
+    openPwModal();
   });
   document.getElementById('act-load').addEventListener('click', () => {
     Sound.click();
@@ -351,7 +544,7 @@
       sessionStorage.setItem('pendingImportJSON', text);
       sessionStorage.setItem('pendingImportName', f.name);
       Sound.ok();
-      window.location.href = 'arm.html?action=import';
+      navigate('arm.html?action=import');
     } catch (err) {
       Sound.err();
       alert('That file is not valid JSON: ' + err.message);

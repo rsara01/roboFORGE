@@ -71,24 +71,6 @@ export function buildFlatEnvironment(scene) {
   const colliders = [];
   const interactables = [];
 
-  for (let i = 0; i < 8; i++) {
-    const r = 1.5 + Math.random() * 4;
-    const a = Math.random() * Math.PI * 2;
-    const x = Math.cos(a) * r * 2;
-    const z = Math.sin(a) * r * 2;
-    const w = 0.5 + Math.random() * 0.6;
-    const h = 0.4 + Math.random() * 0.8;
-    const d = 0.5 + Math.random() * 0.6;
-    const c = new THREE.Mesh(
-      new THREE.BoxGeometry(w, h, d),
-      new THREE.MeshStandardMaterial({ color: 0xa9b4c3, roughness: 0.8 })
-    );
-    c.position.set(x, h / 2, z);
-    c.castShadow = c.receiveShadow = true;
-    scene.add(c);
-    colliders.push({ aabb: buildAabbFromMesh(c), mesh: c });
-  }
-
   return {
     name: 'flat',
     group,

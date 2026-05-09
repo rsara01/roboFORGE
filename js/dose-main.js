@@ -364,7 +364,7 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
 
 const ARM_YAW_RATE = 1.4;
-const ARM_MOVE_RATE = 0.35;
+const ELBOW_RATE = 1.6;
 const Z_RATE = 0.35;
 const LIFT_RATE = 0.35;
 const GRIP_RATE = 1.6;
@@ -373,30 +373,28 @@ function applyKeyboard(dt) {
   if (playing) return;
 
   let lin = 0, ang = 0;
-  if (keys.has('arrowup')) lin += 1;
-  if (keys.has('arrowdown')) lin -= 1;
-  if (keys.has('arrowleft')) ang += 1;
-  if (keys.has('arrowright')) ang -= 1;
+  if (keys.has('w') || keys.has('arrowup')) lin += 1;
+  if (keys.has('s') || keys.has('arrowdown')) lin -= 1;
+  if (keys.has('a') || keys.has('arrowleft')) ang += 1;
+  if (keys.has('d') || keys.has('arrowright')) ang -= 1;
   physics.command(lin, ang);
-
-  let localX = arm.targetX ?? arm.toolLocalPose().x;
-  let localY = arm.targetY ?? arm.toolLocalPose().y;
-  if (keys.has('w')) localY += ARM_MOVE_RATE * dt;
-  if (keys.has('s')) localY -= ARM_MOVE_RATE * dt;
-  if (keys.has('a')) localX -= ARM_MOVE_RATE * dt;
-  if (keys.has('d')) localX += ARM_MOVE_RATE * dt;
-  arm.setIKTarget(localX, localY, arm.targetZ);
-  arm.targetX = localX;
-  arm.targetY = localY;
 
   if (keys.has('q')) arm.targetQ1 += ARM_YAW_RATE * dt;
   if (keys.has('e')) arm.targetQ1 -= ARM_YAW_RATE * dt;
+  if (keys.has('i')) arm.targetQ2 += ELBOW_RATE * dt;
+  if (keys.has('k')) arm.targetQ2 -= ELBOW_RATE * dt;
+  arm.targetQ1 = Math.max(-Math.PI, Math.min(Math.PI, arm.targetQ1));
+  arm.targetQ2 = Math.max(-Math.PI, Math.min(Math.PI, arm.targetQ2));
   if (keys.has('t')) arm.targetLift = Math.min(DOSE_DIMS.liftRange, arm.targetLift + LIFT_RATE * dt);
   if (keys.has('g')) arm.targetLift = Math.max(0, arm.targetLift - LIFT_RATE * dt);
   if (keys.has('r')) arm.targetZ = Math.min(0, arm.targetZ + Z_RATE * dt);
   if (keys.has('f')) arm.targetZ = Math.max(-DOSE_DIMS.zRange, arm.targetZ - Z_RATE * dt);
   if (keys.has('z')) arm.targetGrip = Math.max(0, arm.targetGrip - GRIP_RATE * dt);
   if (keys.has('x')) arm.targetGrip = Math.min(1, arm.targetGrip + GRIP_RATE * dt);
+
+  const pose = arm.toolLocalPose();
+  arm.targetX = pose.x;
+  arm.targetY = pose.y;
 }
 
 const clock = new THREE.Clock();
