@@ -44,6 +44,25 @@ export class DroneController {
     this.targetYaw = 0;
     this.maxTilt = 0.45;
     this.maxClimbRate = 4.0;
+    this.maxYawRate = 2.5;
+
+    this.manual = { active: false, pitch: 0, roll: 0, yawRate: 0, climbRate: 0 };
+  }
+
+  setManualInput({ pitch = 0, roll = 0, yawRate = 0, climbRate = 0 } = {}) {
+    this.manual.active = true;
+    this.manual.pitch = pitch;
+    this.manual.roll = roll;
+    this.manual.yawRate = yawRate;
+    this.manual.climbRate = climbRate;
+  }
+
+  clearManualInput() {
+    this.manual.active = false;
+    this.manual.pitch = 0;
+    this.manual.roll = 0;
+    this.manual.yawRate = 0;
+    this.manual.climbRate = 0;
   }
 
   _build() {
@@ -78,29 +97,42 @@ export class DroneController {
     const vel = p.velocity;
     const eul = p.getEuler();
 
-    const ex = this.target.x - pos.x;
-    const ez = this.target.z - pos.z;
-    const vDesX = THREE.MathUtils.clamp(this.posX.step(ex, dt), -3, 3);
-    const vDesZ = THREE.MathUtils.clamp(this.posZ.step(ez, dt), -3, 3);
+    let pitchDes, rollDes, yawRateDes;
 
-    const cy = Math.cos(eul.yaw), sy = Math.sin(eul.yaw);
-    const evX = vDesX - vel.x;
-    const evZ = vDesZ - vel.z;
-    const accX = this.velX.step(evX, dt);
-    const accZ = this.velZ.step(evZ, dt);
+    if (this.manual.active) {
+      this.target.y += this.manual.climbRate * this.maxClimbRate * dt;
+      pitchDes = this.manual.pitch * this.maxTilt;
+      rollDes  = -this.manual.roll * this.maxTilt;
+      yawRateDes = this.manual.yawRate * this.maxYawRate;
+      this.targetYaw = eul.yaw;
+      this.target.x = pos.x;
+      this.target.z = pos.z;
+    } else {
+      const ex = this.target.x - pos.x;
+      const ez = this.target.z - pos.z;
+      const vDesX = THREE.MathUtils.clamp(this.posX.step(ex, dt), -3, 3);
+      const vDesZ = THREE.MathUtils.clamp(this.posZ.step(ez, dt), -3, 3);
 
-    const bodyAccZ =  cy * accZ + sy * accX;
-    const bodyAccX = -sy * accZ + cy * accX;
-    const pitchDes = THREE.MathUtils.clamp( bodyAccZ, -this.maxTilt, this.maxTilt);
-    const rollDes  = THREE.MathUtils.clamp(-bodyAccX, -this.maxTilt, this.maxTilt);
+      const cy = Math.cos(eul.yaw), sy = Math.sin(eul.yaw);
+      const evX = vDesX - vel.x;
+      const evZ = vDesZ - vel.z;
+      const accX = this.velX.step(evX, dt);
+      const accZ = this.velZ.step(evZ, dt);
+
+      const bodyAccZ =  cy * accZ + sy * accX;
+      const bodyAccX = -sy * accZ + cy * accX;
+      pitchDes = THREE.MathUtils.clamp( bodyAccZ, -this.maxTilt, this.maxTilt);
+      rollDes  = THREE.MathUtils.clamp(-bodyAccX, -this.maxTilt, this.maxTilt);
+
+      const yawErr = wrapAngle(this.targetYaw - eul.yaw);
+      yawRateDes = THREE.MathUtils.clamp(this.yaw.step(yawErr, dt), -this.maxYawRate, this.maxYawRate);
+    }
 
     const eAlt = this.target.y - pos.y;
     const altDelta = THREE.MathUtils.clamp(this.alt.step(eAlt, dt), -0.6, 0.6);
     let collective = this.hoverCollective + altDelta;
     collective = THREE.MathUtils.clamp(collective, 0, 1);
 
-    const yawErr = wrapAngle(this.targetYaw - eul.yaw);
-    const yawRateDes = THREE.MathUtils.clamp(this.yaw.step(yawErr, dt), -2.5, 2.5);
     const yawTorque = this.yawR.step(yawRateDes - p.angVel.y, dt);
 
     const rollTorque  = this.attR.step(rollDes  - eul.roll,  dt);

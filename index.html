@@ -206,6 +206,15 @@
   </div>
 
   <div class="actions">
+    <div class="action" id="act-drone">
+      <div class="head">
+        <div class="badge">UAV</div>
+        <h2>Drone Simulator</h2>
+      </div>
+      <p>Fly a quadrotor with tunable PIDs over real 3D terrain. Trace flight paths and export the mission to a real drone.</p>
+      <div class="meta">Available</div>
+    </div>
+
     <div class="action" id="act-arm">
       <div class="head">
         <div class="badge">ARM</div>
@@ -215,13 +224,13 @@
       <div class="meta">Available</div>
     </div>
 
-    <div class="action tagged" id="act-drone">
+    <div class="action tagged" id="act-dose">
       <div class="head">
-        <div class="badge">UAV</div>
-        <h2>Drone Simulator</h2>
+        <div class="badge">DOSE</div>
+        <h2>Dose Robot</h2>
       </div>
-      <p>Fly a quadrotor with tunable PIDs over real 3D terrain. Trace flight paths and export the mission to a real drone.</p>
-      <div class="meta">Available</div>
+      <p>Drive a SCARA-armed mobile robot through a hospital ward. Pick up vials and pill bottles, deliver to the bedside.</p>
+      <div class="meta">Password required</div>
     </div>
 
     <div class="action" id="act-load">
@@ -316,6 +325,17 @@
   document.getElementById('act-drone').addEventListener('click', () => {
     Sound.ok();
     window.location.href = 'drone.html';
+  });
+  document.getElementById('act-dose').addEventListener('click', () => {
+    const entered = prompt('Dose simulator is locked. Enter password:');
+    if (entered === null) return;
+    if (entered !== 'dose') {
+      Sound.err();
+      alert('Wrong password.');
+      return;
+    }
+    Sound.ok();
+    window.location.href = 'dose.html';
   });
   document.getElementById('act-load').addEventListener('click', () => {
     Sound.click();

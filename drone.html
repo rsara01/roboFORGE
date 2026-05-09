@@ -118,8 +118,34 @@
     background: var(--bg-2);
     border-left: 1px solid var(--border);
     overflow-y: auto;
-    padding: 12px;
+    display: flex;
+    flex-direction: column;
   }
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-2);
+    position: sticky; top: 0; z-index: 2;
+  }
+  .tab {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--fg-dim);
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    padding: 10px 4px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .tab:hover { background: var(--bg-3); }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    background: var(--bg-3);
+  }
+  .tab-panel { display: none; padding: 12px; }
+  .tab-panel.active { display: block; }
   .panel-section {
     margin-bottom: 14px;
     padding-bottom: 12px;
@@ -129,6 +155,36 @@
   .panel-section h3 {
     font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px;
     color: var(--fg-dim); margin: 0 0 8px 0;
+  }
+  #script-area {
+    width: 100%;
+    min-height: 280px;
+    background: #0a0e14;
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px;
+    font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    resize: vertical;
+  }
+  #script-output {
+    width: 100%;
+    max-height: 180px;
+    overflow: auto;
+    background: #0a0e14;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 6px 8px;
+    font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: var(--ok);
+    white-space: pre-wrap;
+    margin: 0;
+  }
+  code {
+    background: var(--bg-3);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 11px;
   }
   .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
   .hint { font-size: 11px; color: var(--fg-dim); margin-top: 4px; line-height: 1.4; }
@@ -229,6 +285,12 @@
   </div>
 
   <aside id="right-panel">
+    <div class="tabs">
+      <button class="tab active" data-tab="controls">Controls</button>
+      <button class="tab" data-tab="script">Scripting</button>
+    </div>
+
+    <div class="tab-panel active" data-panel="controls">
 
     <div class="panel-section">
       <h3>Flight Mode</h3>
@@ -238,10 +300,20 @@
         <button id="mode-mission">Run Mission</button>
       </div>
       <div class="hint">
-        <b>Left stick (WASD):</b> W/S throttle, A/D yaw.<br />
-        <b>Right stick (arrows):</b> &uarr;/&darr; pitch, &larr;/&rarr; roll (body-relative).<br />
+        <b>WASD:</b> W/S forward&amp;back, A/D strafe left&amp;right.<br />
+        <b>Arrows:</b> &uarr;/&darr; throttle, &larr;/&rarr; yaw.<br />
         <b>V</b> = toggle FPV. <b>G</b> = sentry. Click the city in Hover mode to set a target.
       </div>
+    </div>
+
+    <div class="panel-section">
+      <h3>Drone Speed</h3>
+      <div class="env-slider">
+        <span class="lbl">Speed</span>
+        <input type="range" id="drone-speed" min="0.1" max="3" step="0.1" value="1" />
+        <span class="v" id="drone-speed-v">1.0x</span>
+      </div>
+      <div class="hint">Multiplier for keyboard control: lateral, throttle and yaw response.</div>
     </div>
 
     <div class="panel-section">
@@ -297,6 +369,66 @@
     <div class="panel-section">
       <h3>Drone Status</h3>
       <div id="status-block" class="hint">Armed</div>
+    </div>
+
+    </div>
+
+    <div class="tab-panel" data-panel="script">
+      <h3>Scripting Panel</h3>
+      <p class="hint">JavaScript with helpers:
+        <code>setTarget({x,y,z,yaw})</code>,
+        <code>flyTo(x,y,z,opts?)</code>,
+        <code>wait(s)</code>,
+        <code>position()</code>,
+        <code>velocity()</code>,
+        <code>yaw()</code>,
+        <code>setMode("HOVER"|"MANUAL"|"MISSION")</code>,
+        <code>setWind(x,z)</code>,
+        <code>gust(vx?,vy?,vz?)</code>,
+        <code>setGravity(b)</code>,
+        <code>setDrag(b)</code>,
+        <code>addWaypoint(x,y,z)</code>,
+        <code>clearWaypoints()</code>,
+        <code>runMission()</code>,
+        <code>reset()</code>,
+        <code>log(x)</code>.
+      </p>
+      <div class="row">
+        <label>Examples
+          <select id="drone-script-example">
+            <option value="">- pick one -</option>
+            <option value="square">Fly a square pattern</option>
+            <option value="climb">Climb &amp; spiral</option>
+            <option value="mission">Build &amp; run a 3-waypoint mission</option>
+            <option value="windy">Stress test in wind</option>
+          </select>
+        </label>
+      </div>
+      <textarea id="script-area" spellcheck="false">async function run() {
+  setMode("HOVER");
+  const alt = 5;
+  const path = [
+    [ 6, alt,  0],
+    [ 6, alt,  6],
+    [ 0, alt,  6],
+    [ 0, alt,  0],
+  ];
+  for (const [x, y, z] of path) {
+    log("flying to " + x + "," + z);
+    await flyTo(x, y, z, { tolerance: 0.6, timeout: 12 });
+    await wait(0.5);
+  }
+  log("done");
+}
+run();
+      </textarea>
+      <div class="row" style="margin-top:6px;">
+        <button id="script-run" class="primary">Run</button>
+        <button id="script-stop">Stop</button>
+        <button id="script-clear">Clear output</button>
+      </div>
+      <h3 style="margin-top:10px;">Output</h3>
+      <pre id="script-output"></pre>
     </div>
 
   </aside>

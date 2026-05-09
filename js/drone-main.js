@@ -13,6 +13,7 @@ import { buildDroneMesh } from './drone-mesh.js';
 import { Sentry } from './drone-sentry.js';
 import { exportDroneKit, exportJSON } from './drone-export.js';
 import { TelemetryPlot } from './drone-telemetry.js';
+import { DroneScriptRunner, DRONE_SCRIPT_EXAMPLES } from './drone-scripting.js';
 
 const viewport = document.getElementById('viewport');
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -108,10 +109,11 @@ const mission = { waypoints: [], idx: 0, holdTime: 0 };
 
 const keys = new Set();
 const STICK_KEYS = new Set([
-  'w','a','s','d',
+  'w','a','s','d','q','e',
   'arrowup','arrowdown','arrowleft','arrowright',
   'v','g','f',
 ]);
+let speedScale = 1.0;
 window.addEventListener('keydown', (e) => {
   const tag = (e.target.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'textarea') return;
@@ -124,18 +126,29 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
 
 function applyManualInput(dt) {
+  const pitch    = (keys.has('w')          ? 1 : 0) - (keys.has('s')         ? 1 : 0);
+  const roll     = (keys.has('d')          ? 1 : 0) - (keys.has('a')         ? 1 : 0);
+  const throttle = (keys.has('arrowup')    ? 1 : 0) - (keys.has('arrowdown') ? 1 : 0);
+  const yawIn    = (keys.has('arrowright') ? 1 : 0) - (keys.has('arrowleft') ? 1 : 0)
+                 + (keys.has('e')          ? 1 : 0) - (keys.has('q')         ? 1 : 0);
 
-  const throttle = (keys.has('w') ? 1 : 0) - (keys.has('s') ? 1 : 0);
-  const yawIn    = (keys.has('d') ? 1 : 0) - (keys.has('a') ? 1 : 0);
-
-  const pitch = (keys.has('arrowup')    ? 1 : 0) - (keys.has('arrowdown')  ? 1 : 0);
-  const roll  = (keys.has('arrowright') ? 1 : 0) - (keys.has('arrowleft')  ? 1 : 0);
+  if (mode === FlightMode.MANUAL) {
+    controller.setManualInput({
+      pitch,
+      roll,
+      yawRate: yawIn,
+      climbRate: throttle,
+    });
+    const minH = terrain.heightAt(physics.position.x, physics.position.z) + 0.5;
+    if (controller.target.y < minH) controller.target.y = minH;
+    return;
+  }
 
   if (!throttle && !yawIn && !pitch && !roll) return;
 
-  const climbSpeed = 5.0;
-  const yawSpeed   = 1.8;
-  const moveSpeed  = mode === FlightMode.MANUAL ? 8.0 : 6.0;
+  const climbSpeed = 5.0 * speedScale;
+  const yawSpeed   = 1.8 * speedScale;
+  const moveSpeed  = 6.0 * speedScale;
 
   if (throttle) {
     target.y += throttle * climbSpeed * dt;
@@ -146,7 +159,6 @@ function applyManualInput(dt) {
     controller.targetYaw += yawIn * yawSpeed * dt;
   }
   if (pitch || roll) {
-
     const yaw = controller.targetYaw;
     const sy = Math.sin(yaw), cy = Math.cos(yaw);
     target.x += (pitch * sy + roll * cy) * moveSpeed * dt;
@@ -226,8 +238,20 @@ document.getElementById('topbar-sound').addEventListener('change', (e) => Sound.
 document.addEventListener('click', (e) => { if (e.target?.tagName === 'BUTTON') Sound.click(); });
 
 function setMode(m) {
+  const prev = mode;
   mode = m;
   controller.reset();
+  if (m === FlightMode.MANUAL) {
+    target.copy(physics.position);
+    controller.setTarget(target, physics.getEuler().yaw);
+    controller.setManualInput({});
+  } else {
+    controller.clearManualInput();
+    if (prev === FlightMode.MANUAL) {
+      target.copy(physics.position);
+      controller.setTarget(target, physics.getEuler().yaw);
+    }
+  }
   document.getElementById('hud-mode').textContent = m;
   for (const id of ['mode-hover', 'mode-manual', 'mode-mission']) {
     document.getElementById(id).classList.remove('primary');
@@ -556,6 +580,86 @@ function resizeMain() {
 window.addEventListener('resize', resizeMain);
 new ResizeObserver(resizeMain).observe(viewport);
 resizeMain();
+
+const speedSlider = document.getElementById('drone-speed');
+const speedSliderV = document.getElementById('drone-speed-v');
+if (speedSlider) {
+  speedSlider.addEventListener('input', () => {
+    speedScale = parseFloat(speedSlider.value);
+    speedSliderV.textContent = speedScale.toFixed(1) + 'x';
+  });
+}
+
+document.querySelectorAll('#right-panel .tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const t = btn.dataset.tab;
+    document.querySelectorAll('#right-panel .tab').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('#right-panel .tab-panel').forEach(p => {
+      p.classList.toggle('active', p.dataset.panel === t);
+    });
+  });
+});
+
+const scriptApi = {
+  setTarget,
+  position: () => ({ x: physics.position.x, y: physics.position.y, z: physics.position.z }),
+  velocity: () => ({ x: physics.velocity.x, y: physics.velocity.y, z: physics.velocity.z }),
+  yaw: () => physics.getEuler().yaw,
+  setMode: (m) => {
+    const map = { HOVER: FlightMode.HOVER, MANUAL: FlightMode.MANUAL, MISSION: FlightMode.MISSION };
+    const fm = map[String(m).toUpperCase()];
+    if (fm) setMode(fm);
+  },
+  setWind: (x, z) => {
+    physics.wind.set(x, 0, z);
+    windX.value = x; windZ.value = z;
+    windXv.textContent = x.toFixed(1); windZv.textContent = z.toFixed(1);
+  },
+  gust: (vx, vy, vz) => {
+    if (vx === undefined) {
+      const a = Math.random() * Math.PI * 2;
+      physics.applyImpulse(new THREE.Vector3(Math.cos(a) * 3, (Math.random() - 0.3) * 1.5, Math.sin(a) * 3));
+    } else {
+      physics.applyImpulse(new THREE.Vector3(vx, vy ?? 0, vz ?? 0));
+    }
+  },
+  setGravity: (on) => { physics.gravityEnabled = !!on; envGravity.checked = !!on; },
+  setDrag: (on) => { physics.dragEnabled = !!on; envDrag.checked = !!on; },
+  addWaypoint: (x, y, z) => {
+    waypoints.push(new THREE.Vector3(x, y, z));
+    renderWaypoints();
+    pathLine.update(waypoints);
+  },
+  clearWaypoints: () => {
+    waypoints.length = 0;
+    renderWaypoints();
+    pathLine.update(waypoints);
+  },
+  runMission: () => {
+    if (waypoints.length === 0) { Sound.err(); return; }
+    mission.waypoints = waypoints.map(p => p.clone());
+    mission.idx = 0;
+    mission.holdTime = 0;
+    setMode(FlightMode.MISSION);
+  },
+  reset: () => spawnDrone(new THREE.Vector2(physics.position.x, physics.position.z)),
+};
+
+const scriptOut = document.getElementById('script-output');
+const scriptArea = document.getElementById('script-area');
+const scriptRunner = new DroneScriptRunner(scriptApi, scriptOut);
+document.getElementById('script-run')?.addEventListener('click', () => {
+  scriptRunner.clearOutput();
+  scriptRunner.run(scriptArea.value);
+});
+document.getElementById('script-stop')?.addEventListener('click', () => scriptRunner.stop());
+document.getElementById('script-clear')?.addEventListener('click', () => scriptRunner.clearOutput());
+document.getElementById('drone-script-example')?.addEventListener('change', (e) => {
+  const v = e.target.value;
+  if (v && DRONE_SCRIPT_EXAMPLES[v]) {
+    scriptArea.value = DRONE_SCRIPT_EXAMPLES[v];
+  }
+});
 
 spawnDrone(new THREE.Vector2(0, 0));
 tick();
