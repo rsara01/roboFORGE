@@ -4,6 +4,46 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>RoboForge - Dose Robot</title>
+<script>
+  // ╔══════════════════════════════════════════════════════════════╗
+  // ║ RoboForge - Dose Robot Simulator                            ║
+  // ║ Created by: Rishik Saravanan                                ║
+  // ║ Birthday: May 25th                                          ║
+  // ║ © 2024-2026. All rights reserved.                           ║
+  // ╚══════════════════════════════════════════════════════════════╝
+  
+  // Session validation - prevent direct URL access
+  (function() {
+    const SESSION_KEY = 'dose_auth_token_rs_0525';
+    const TIMESTAMP_KEY = 'dose_auth_time_rs_0525';
+    const MAX_SESSION_TIME = 8 * 60 * 60 * 1000; // 8 hours
+    const CREATOR = 'Rishik Saravanan';
+    
+    const token = sessionStorage.getItem(SESSION_KEY);
+    const timestamp = sessionStorage.getItem(TIMESTAMP_KEY);
+    
+    if (!token || !timestamp || !token.startsWith('rs_dose_')) {
+      window.location.href = './index.html';
+      return;
+    }
+    
+    const sessionAge = Date.now() - parseInt(timestamp);
+    if (sessionAge > MAX_SESSION_TIME) {
+      sessionStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(TIMESTAMP_KEY);
+      window.location.href = './index.html';
+    }
+  })();
+  
+  // Watermark for code identification
+  window._CREATOR_INFO = {
+    creator: 'Rishik Saravanan',
+    birthday: 'May 25th',
+    project: 'RoboForge',
+    version: '2.0.0',
+    copyright: '© 2024-2026'
+  };
+</script>
 <script type="importmap">
 {
   "imports": {

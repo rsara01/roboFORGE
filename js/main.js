@@ -1,4 +1,12 @@
 
+/**
+ * ╔══════════════════════════════════════════════════════════════╗
+ * ║ RoboForge - Main Robot Simulator Application                ║
+ * ║ Created by: Rishik Saravanan                                ║
+ * ║ Birthday: May 25th                                          ║
+ * ║ © 2024-2026. All rights reserved.                           ║
+ * ╚══════════════════════════════════════════════════════════════╝
+ */
 
 import * as THREE from 'three';
 import { createScene } from './scene.js';

@@ -1,3 +1,12 @@
+<!--
+╔══════════════════════════════════════════════════════════════╗
+║ RoboForge - Dashboard & Launcher                            ║
+║ Created by: Rishik Saravanan                                ║
+║ Birthday: May 25th                                          ║
+║ © 2024-2026. All rights reserved.                           ║
+║ Unauthorized copying or distribution is prohibited.         ║
+╚══════════════════════════════════════════════════════════════╝
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -393,7 +402,7 @@
   <div class="card">
     <img class="logo" src="assets/logo-mark.svg" alt="RoboForge logo" />
     <h1>Welcome to RoboForge</h1>
-    <p>A browser-native sandbox for robotic arms, drones, and a hospital dose robot. Build it, drive it, record motion, export Arduino code.</p>
+    <p>Test your robotic creations in a browser-native sandbox.</p>
     <button id="welcome-enter" type="button">Enter</button>
   </div>
 </div>
@@ -482,12 +491,18 @@
   }
 
   // ----- Password modal for the dose sim -----
-  const DOSE_PASSWORD = 'dose';
+  // Security: Creator watermark - Rishik Saravanan, Birthday: May 25th
+  
   const pwModal = document.getElementById('pw-modal');
   const pwInput = document.getElementById('pw-input');
   const pwErr = document.getElementById('pw-err');
   const pwSubmit = document.getElementById('pw-submit');
   const pwCancel = document.getElementById('pw-cancel');
+  
+  // Session-based authentication keys
+  const SESSION_KEY = 'dose_auth_token_rs_0525';
+  const TIMESTAMP_KEY = 'dose_auth_time_rs_0525';
+  const CREATOR_WATERMARK = 'Rishik Saravanan • May 25th • RoboForge';
 
   function openPwModal() {
     pwInput.value = '';
@@ -496,8 +511,40 @@
     setTimeout(() => pwInput.focus(), 30);
   }
   function closePwModal() { pwModal.classList.remove('show'); }
+  
+  function generateDoseToken() {
+    const hash = btoa(CREATOR_WATERMARK + Date.now()).slice(0, 32);
+    return `rs_dose_${hash}_${Date.now()}`;
+  }
+  
   function tryPw() {
-    if (pwInput.value === DOSE_PASSWORD) {
+    const password = pwInput.value;
+    // Hash password with watermark for comparison
+    const hashInput = password + CREATOR_WATERMARK;
+    let hash = 0;
+    for (let i = 0; i < hashInput.length; i++) {
+      const char = hashInput.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    const submittedHash = Math.abs(hash).toString(16);
+    
+    // Valid hash (from "dose" + CREATOR_WATERMARK)
+    const validHashInput = 'dose' + CREATOR_WATERMARK;
+    let validHash = 0;
+    for (let i = 0; i < validHashInput.length; i++) {
+      const char = validHashInput.charCodeAt(i);
+      validHash = ((validHash << 5) - validHash) + char;
+      validHash = validHash & validHash;
+    }
+    const correctHash = Math.abs(validHash).toString(16);
+    
+    if (submittedHash === correctHash) {
+      // Create session token to prevent direct URL access
+      const token = generateDoseToken();
+      sessionStorage.setItem(SESSION_KEY, token);
+      sessionStorage.setItem(TIMESTAMP_KEY, Date.now().toString());
+      
       Sound.ok();
       closePwModal();
       navigate('dose.html');

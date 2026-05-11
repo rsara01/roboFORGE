@@ -1,4 +1,14 @@
 
+/**
+ * ╔══════════════════════════════════════════════════════════════╗
+ * ║ RoboForge - DOSE Environment Builder (Hospital & Flat)       ║
+ * ║ Created by: Rishik Saravanan                                ║
+ * ║ Birthday: May 25th                                          ║
+ * ║ © 2024-2026. All rights reserved.                           ║
+ * ║ Unauthorized copying, modification, or distribution         ║
+ * ║ of this software is prohibited.                             ║
+ * ╚══════════════════════════════════════════════════════════════╝
+ */
 
 import * as THREE from 'three';
 
