@@ -65,7 +65,7 @@ export class CameraFeed {
     this.renderer.render(this.scene, this.cam);
     this._updateDetectLabel(tipPos, fwd);
   }
-
+// remember to change code to fix the dose password glitch 
   _updateDetectLabel(tipPos, fwd) {
     if (!this.physics) { this.detectEl.textContent = '—'; return; }
     let closest = null;

@@ -23,8 +23,10 @@ class DoseSecurityManager {
    * Incorporates creator watermark and timestamp
    */
   static generateToken() {
-    const hash = btoa(this.CREATOR_WATERMARK + Date.now()).slice(0, 32);
-    const token = `rs_dose_${hash}_${Date.now()}`;
+    const randomPart = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : Math.random().toString(16).slice(2);
+    const token = `rs_dose_${Date.now()}_${randomPart}`;
     return token;
   }
 
@@ -84,9 +86,9 @@ class DoseSecurityManager {
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Keep it 32-bit
+      hash >>>= 0; // Keep as unsigned 32-bit
     }
-    return Math.abs(hash).toString(16);
+    return hash.toString(16);
   }
 
   /**

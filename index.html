@@ -502,7 +502,19 @@
   // Session-based authentication keys
   const SESSION_KEY = 'dose_auth_token_rs_0525';
   const TIMESTAMP_KEY = 'dose_auth_time_rs_0525';
+  const SIG_KEY = 'dose_auth_sig_rs_0525';
   const CREATOR_WATERMARK = 'Rishik Saravanan • May 25th • RoboForge';
+
+  function computeDoseSignature(token, timestamp) {
+    const input = `${token}|${timestamp}|${CREATOR_WATERMARK}`;
+    let hash = 0;
+    for (let i = 0; i < input.length; i++) {
+      const char = input.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash >>>= 0;
+    }
+    return hash.toString(16);
+  }
 
   function openPwModal() {
     pwInput.value = '';
@@ -513,8 +525,8 @@
   function closePwModal() { pwModal.classList.remove('show'); }
   
   function generateDoseToken() {
-    const hash = btoa(CREATOR_WATERMARK + Date.now()).slice(0, 32);
-    return `rs_dose_${hash}_${Date.now()}`;
+    const randomPart = crypto && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(16).slice(2);
+    return `rs_dose_${Date.now()}_${randomPart}`;
   }
   
   function tryPw() {
@@ -525,9 +537,9 @@
     for (let i = 0; i < hashInput.length; i++) {
       const char = hashInput.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
+      hash >>>= 0; // Keep as unsigned 32-bit
     }
-    const submittedHash = Math.abs(hash).toString(16);
+    const submittedHash = hash.toString(16);
     
     // Valid hash (from "dose" + CREATOR_WATERMARK)
     const validHashInput = 'dose' + CREATOR_WATERMARK;
@@ -535,15 +547,17 @@
     for (let i = 0; i < validHashInput.length; i++) {
       const char = validHashInput.charCodeAt(i);
       validHash = ((validHash << 5) - validHash) + char;
-      validHash = validHash & validHash;
+      validHash >>>= 0; // Keep as unsigned 32-bit
     }
-    const correctHash = Math.abs(validHash).toString(16);
+    const correctHash = validHash.toString(16);
     
     if (submittedHash === correctHash) {
       // Create session token to prevent direct URL access
       const token = generateDoseToken();
+      const timestamp = Date.now().toString();
       sessionStorage.setItem(SESSION_KEY, token);
-      sessionStorage.setItem(TIMESTAMP_KEY, Date.now().toString());
+      sessionStorage.setItem(TIMESTAMP_KEY, timestamp);
+      sessionStorage.setItem(SIG_KEY, computeDoseSignature(token, timestamp));
       
       Sound.ok();
       closePwModal();

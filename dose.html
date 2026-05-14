@@ -16,26 +16,47 @@
   (function() {
     const SESSION_KEY = 'dose_auth_token_rs_0525';
     const TIMESTAMP_KEY = 'dose_auth_time_rs_0525';
+    const SIG_KEY = 'dose_auth_sig_rs_0525';
     const MAX_SESSION_TIME = 8 * 60 * 60 * 1000; // 8 hours
-    const CREATOR = 'Rishik Saravanan';
+    const CREATOR_WATERMARK = 'Rishik Saravanan • May 25th • RoboForge';
     
     const token = sessionStorage.getItem(SESSION_KEY);
     const timestamp = sessionStorage.getItem(TIMESTAMP_KEY);
+    const signature = sessionStorage.getItem(SIG_KEY);
+
+    function computeDoseSignature(tokenValue, timestampValue) {
+      const input = `${tokenValue}|${timestampValue}|${CREATOR_WATERMARK}`;
+      let hash = 0;
+      for (let i = 0; i < input.length; i++) {
+        const char = input.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash >>>= 0;
+      }
+      return hash.toString(16);
+    }
     
-    if (!token || !timestamp || !token.startsWith('rs_dose_')) {
+    if (!token || !timestamp || !signature || !token.startsWith('rs_dose_')) {
       window.location.href = './index.html';
       return;
     }
     
-    const sessionAge = Date.now() - parseInt(timestamp);
+    if (computeDoseSignature(token, timestamp) !== signature) {
+      sessionStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(TIMESTAMP_KEY);
+      sessionStorage.removeItem(SIG_KEY);
+      window.location.href = './index.html';
+      return;
+    }
+    
+    const sessionAge = Date.now() - parseInt(timestamp, 10);
     if (sessionAge > MAX_SESSION_TIME) {
       sessionStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(TIMESTAMP_KEY);
+      sessionStorage.removeItem(SIG_KEY);
       window.location.href = './index.html';
     }
   })();
   
-  // Watermark for code identification
   window._CREATOR_INFO = {
     creator: 'Rishik Saravanan',
     birthday: 'May 25th',
