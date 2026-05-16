@@ -24,6 +24,7 @@ import { TelemetryPlot } from './drone-telemetry.js';
 import { DroneScriptRunner, DRONE_SCRIPT_EXAMPLES } from './drone-scripting.js';
 
 const viewport = document.getElementById('viewport');
+Loading.show('Loading simulator…', 120);
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(viewport.clientWidth, viewport.clientHeight);
@@ -135,7 +136,7 @@ window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
 
 function applyManualInput(dt) {
   const pitch    = (keys.has('w')          ? 1 : 0) - (keys.has('s')         ? 1 : 0);
-  const roll     = (keys.has('d')          ? 1 : 0) - (keys.has('a')         ? 1 : 0);
+  const roll     = (keys.has('a')          ? 1 : 0) - (keys.has('d')         ? 1 : 0);
   const throttle = (keys.has('arrowup')    ? 1 : 0) - (keys.has('arrowdown') ? 1 : 0);
   const yawIn    = (keys.has('arrowright') ? 1 : 0) - (keys.has('arrowleft') ? 1 : 0)
                  + (keys.has('e')          ? 1 : 0) - (keys.has('q')         ? 1 : 0);

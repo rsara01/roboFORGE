@@ -1,6 +1,7 @@
 
 
 const STYLE_ID = 'rf-loading-style';
+let showTimer = null;
 
 function injectStyles() {
   if (document.getElementById(STYLE_ID)) return;
@@ -66,12 +67,24 @@ function build(label) {
 }
 
 export const Loading = {
-  show(label) {
+  show(label, delay = 0) {
     if (document.getElementById('rf-loading')) return;
+    if (showTimer) return;
+    if (delay > 0) {
+      showTimer = setTimeout(() => {
+        showTimer = null;
+        if (!document.getElementById('rf-loading')) build(label);
+      }, delay);
+      return;
+    }
     if (document.body) build(label);
     else document.addEventListener('DOMContentLoaded', () => build(label), { once: true });
   },
   hide(extraDelayMs = 0) {
+    if (showTimer) {
+      clearTimeout(showTimer);
+      showTimer = null;
+    }
     const el = document.getElementById('rf-loading');
     if (!el) return;
     setTimeout(() => {
@@ -80,5 +93,3 @@ export const Loading = {
     }, extraDelayMs);
   },
 };
-
-Loading.show();

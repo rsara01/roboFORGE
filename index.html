@@ -18,217 +18,248 @@
     --accent: #667eea;
     --accent-2: #764ba2;
     --orange: #f08327;
-    --orange-soft: #ffb058;
-    --brand-grad: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    --bg: #f5f3f0;
+    --text: #2a2520;
+    --text-light: #7a7470;
+    --border: #e8e4df;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: var(--brand-grad);
+    background: var(--bg);
     min-height: 100vh;
-    color: #1f2330;
+    color: var(--text);
     overflow-x: hidden;
-  }
-  /* Subtle floating shapes for visual interest. */
-  body::before, body::after {
-    content: ''; position: fixed; pointer-events: none;
-    border-radius: 50%;
-    filter: blur(60px);
-    opacity: 0.35;
-  }
-  body::before {
-    width: 360px; height: 360px;
-    background: var(--orange-soft);
-    top: -80px; right: -80px;
-  }
-  body::after {
-    width: 420px; height: 420px;
-    background: white;
-    bottom: -120px; left: -120px;
-    opacity: 0.18;
+    position: relative;
   }
 
   header {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 16px 36px; color: white; gap: 16px;
+    padding: 20px 44px; color: var(--text); gap: 24px;
     position: relative; z-index: 2;
+    border-bottom: 1px solid var(--border);
   }
-  header .brand { display: flex; align-items: center; gap: 12px; }
-  header .brand img { height: 44px; display: block; }
-  header .brand .name { font-size: 22px; font-weight: 800; letter-spacing: 1.2px; }
-  header .brand .sub { font-size: 11px; opacity: 0.85; letter-spacing: 0.4px; text-transform: uppercase; }
-  header nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  header .brand { display: flex; align-items: baseline; gap: 10px; }
+  header .brand img { height: 38px; display: block; }
+  header .brand .name { font-size: 18px; font-weight: 700; letter-spacing: 0.5px; }
+  header .brand .sub { font-size: 10px; color: var(--text-light); letter-spacing: 0.3px; text-transform: uppercase; }
+  header nav { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-left: auto; }
   header nav a, header nav button {
-    color: white; text-decoration: none;
-    padding: 7px 14px; border-radius: 999px; font-size: 12px;
-    background: rgba(255,255,255,0.15);
-    border: 1px solid rgba(255,255,255,0.25);
-    cursor: pointer; transition: background 0.15s;
+    color: var(--text); text-decoration: none;
+    padding: 6px 12px; border-radius: 4px; font-size: 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    cursor: pointer; transition: all 0.15s;
   }
-  header nav a:hover, header nav button:hover { background: rgba(255,255,255,0.28); }
-
-  .theme-bar {
-    display: flex; align-items: center; gap: 8px;
-    background: rgba(255,255,255,0.15);
-    padding: 4px 10px; border-radius: 999px;
+  header nav a:hover, header nav button:hover { 
+    background: white; border-color: var(--text-light);
   }
-  .theme-bar input[type="color"] {
-    width: 22px; height: 22px; padding: 0;
-    border: 1px solid rgba(255,255,255,0.4); border-radius: 50%;
-    background: transparent; cursor: pointer;
-  }
-  .swatches { display: flex; gap: 4px; }
-  .swatch {
-    width: 16px; height: 16px; border-radius: 50%;
-    border: 1px solid rgba(255,255,255,0.5); cursor: pointer;
-  }
-  .swatch:hover { transform: scale(1.18); }
 
   main {
-    max-width: 1100px; margin: 30px auto; padding: 0 24px 60px;
+    max-width: 1200px; margin: 0 auto; padding: 40px 44px 80px;
     position: relative; z-index: 2;
   }
+
   .hero {
-    color: white; text-align: center; margin-bottom: 40px;
+    color: var(--text); text-align: left; margin-bottom: 60px; max-width: 65%;
   }
   .hero h1 {
-    font-size: 38px; font-weight: 800; letter-spacing: 0.4px; margin-bottom: 8px;
+    font-size: 48px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 14px; line-height: 1.1;
   }
   .hero .lede {
-    font-size: 16px; opacity: 0.92; max-width: 560px; margin: 0 auto;
+    font-size: 16px; color: var(--text-light); line-height: 1.6; max-width: 480px;
   }
 
   .actions {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 18px;
-    margin-bottom: 28px;
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 24px;
+    margin-bottom: 48px;
   }
+  
   .action {
     background: white;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 14px 40px rgba(0,0,0,0.18);
+    border-radius: 0;
+    padding: 28px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     cursor: pointer;
-    transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
-    display: flex; flex-direction: column; gap: 10px;
-    border: 2px solid transparent;
+    transition: all 0.2s;
+    display: flex; flex-direction: column; gap: 14px;
+    border: 1px solid var(--border);
     text-align: left;
+    position: relative;
   }
   .action:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 22px 56px rgba(0,0,0,0.26);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
     border-color: var(--accent);
   }
-  .action .head {
-    display: flex; align-items: center; gap: 12px;
+  
+  .action#act-drone {
+    grid-row: 1 / 3;
+    padding: 36px;
   }
-  .action .badge {
-    width: 46px; height: 46px;
-    border-radius: 12px;
-    background: var(--brand-grad);
+  .action#act-drone .head { display: flex; align-items: flex-start; gap: 16px; }
+  .action#act-drone .badge {
+    width: 52px; height: 52px;
+    border-radius: 3px;
+    background: var(--accent);
     color: white; display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 20px;
+    font-weight: 700; font-size: 18px; flex-shrink: 0;
   }
-  .action h2 { font-size: 18px; color: #1f2330; }
-  .action p { color: #5b6473; font-size: 13px; line-height: 1.5; }
-  .action .meta {
-    margin-top: 4px; font-size: 11px; color: #6c7280;
-    text-transform: uppercase; letter-spacing: 0.6px;
+  .action#act-drone h2 { font-size: 28px; color: var(--text); margin-bottom: 8px; }
+  .action#act-drone p { color: var(--text-light); font-size: 14px; line-height: 1.6; }
+  .action#act-drone .meta { font-size: 10px; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px; }
+
+  .action#act-arm {
+    padding: 24px;
   }
-  .action.tagged { position: relative; }
-  .action.tagged::after {
-    content: 'NEW'; position: absolute; top: 14px; right: 14px;
+  .action#act-arm .badge {
+    width: 40px; height: 40px;
+    border-radius: 3px;
+    background: var(--orange);
+    color: white; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px;
+  }
+  .action#act-arm h2 { font-size: 16px; color: var(--text); }
+  .action#act-arm p { color: var(--text-light); font-size: 13px; line-height: 1.5; }
+  .action#act-arm .meta { font-size: 10px; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+
+  .action#act-dose {
+    padding: 24px;
+  }
+  .action#act-dose .badge {
+    width: 40px; height: 40px;
+    border-radius: 3px;
+    background: #e8629b;
+    color: white; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px;
+  }
+  .action#act-dose h2 { font-size: 16px; color: var(--text); }
+  .action#act-dose p { color: var(--text-light); font-size: 13px; line-height: 1.5; }
+  .action#act-dose .meta { font-size: 10px; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+  .action#act-dose::after {
+    content: 'NEW'; position: absolute; top: 12px; right: 12px;
     background: var(--orange); color: white;
-    font-size: 10px; font-weight: 700; letter-spacing: 0.6px;
-    padding: 2px 7px; border-radius: 999px;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
+    padding: 3px 6px; border-radius: 0;
+  }
+
+  .action#act-load {
+    padding: 24px;
+  }
+  .action#act-load .badge {
+    width: 40px; height: 40px;
+    border-radius: 3px;
+    background: #667eea;
+    color: white; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px;
+  }
+  .action#act-load h2 { font-size: 16px; color: var(--text); }
+  .action#act-load p { color: var(--text-light); font-size: 13px; line-height: 1.5; }
+  .action#act-load .meta { font-size: 10px; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+
+  .action .head {
+    display: flex; align-items: center; gap: 10px;
   }
 
   .platforms {
-    background: white; border-radius: 16px;
-    padding: 22px 26px; box-shadow: 0 14px 40px rgba(0,0,0,0.16);
+    background: transparent; border: none;
+    padding: 0; box-shadow: none;
+    margin-top: 60px; margin-bottom: 40px;
   }
   .platforms .head {
-    display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px;
+    display: flex; justify-content: flex-start; align-items: baseline; gap: 16px; margin-bottom: 24px;
+    border-bottom: 2px solid var(--text);
+    padding-bottom: 12px;
   }
-  .platforms h2 { font-size: 16px; }
-  .platforms .lede { font-size: 12px; color: #6c7280; }
+  .platforms h2 { font-size: 20px; font-weight: 700; color: var(--text); }
+  .platforms .lede { font-size: 12px; color: var(--text-light); font-style: italic; }
+  
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
   }
   .tile {
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
-    padding: 14px 10px;
-    background: #f4f6fb;
-    border-radius: 10px;
-    border: 1px solid #e3e8f0;
-    text-align: center;
-    opacity: 0.75;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+    padding: 18px;
+    background: white;
+    border-radius: 0;
+    border: 1px solid var(--border);
+    text-align: left;
+    opacity: 0.8;
+    cursor: not-allowed;
+    transition: all 0.2s;
+  }
+  .tile:hover {
+    border-color: var(--text-light);
+    opacity: 0.95;
   }
   .tile .glyph {
-    width: 38px; height: 38px;
-    border-radius: 9px;
-    background: linear-gradient(135deg, #9aa3b2 0%, #6c7280 100%);
-    color: white;
+    width: 36px; height: 36px;
+    border-radius: 3px;
+    background: var(--border);
+    color: var(--text-light);
     display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.3px;
   }
-  .tile .name { font-weight: 600; color: #1f2330; font-size: 13px; }
+  .tile .name { font-weight: 600; color: var(--text); font-size: 14px; }
   .tile .status {
-    font-size: 10px; color: #6c7280;
-    text-transform: uppercase; letter-spacing: 0.6px;
+    font-size: 10px; color: var(--text-light);
+    text-transform: uppercase; letter-spacing: 0.4px;
   }
 
   footer {
-    text-align: center; color: rgba(255,255,255,0.85);
-    font-size: 12px; margin-top: 30px;
+    text-align: left; color: var(--text-light);
+    font-size: 11px; margin-top: 80px; padding-top: 24px;
+    border-top: 1px solid var(--border);
   }
-  footer a { color: white; text-decoration: underline; text-underline-offset: 2px; }
+  footer a { color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border); }
+  footer a:hover { border-bottom-color: var(--text); }
   .file-input { display: none; }
 
   /* --- Welcome overlay (first visit only) --- */
   #welcome {
     position: fixed; inset: 0; z-index: 50;
-    background: var(--brand-grad);
+    background: var(--bg);
     display: flex; align-items: center; justify-content: center;
     transition: opacity 0.45s ease;
   }
   #welcome.hide { opacity: 0; pointer-events: none; }
   #welcome .card {
-    text-align: center; color: white; padding: 40px 56px;
+    text-align: left; color: var(--text); padding: 48px 56px;
     max-width: 520px; animation: pop 0.55s ease-out both;
   }
   #welcome .logo {
-    width: 96px; height: 96px; border-radius: 24px;
-    background: rgba(255,255,255,0.95); padding: 12px;
-    margin: 0 auto 18px; display: block;
-    box-shadow: 0 16px 40px rgba(0,0,0,0.25);
+    width: 88px; height: 88px; border-radius: 3px;
+    background: var(--accent); padding: 12px;
+    margin: 0 0 24px 0; display: block;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   }
   #welcome h1 {
-    font-size: 42px; font-weight: 800; letter-spacing: 1px;
-    margin-bottom: 10px;
+    font-size: 36px; font-weight: 700; letter-spacing: -0.5px;
+    margin-bottom: 12px;
   }
-  #welcome p { font-size: 15px; opacity: 0.92; line-height: 1.55; margin-bottom: 28px; }
+  #welcome p { font-size: 14px; color: var(--text-light); line-height: 1.6; margin-bottom: 24px; }
   #welcome button {
-    background: white; color: var(--accent);
-    border: none; border-radius: 999px;
-    padding: 12px 38px; font-size: 15px; font-weight: 700;
-    letter-spacing: 0.6px; cursor: pointer;
-    box-shadow: 0 12px 32px rgba(0,0,0,0.22);
-    transition: transform 0.15s, box-shadow 0.15s;
+    background: var(--text); color: white;
+    border: none; border-radius: 0;
+    padding: 11px 24px; font-size: 14px; font-weight: 600;
+    letter-spacing: 0.3px; cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    transition: all 0.15s;
   }
-  #welcome button:hover { transform: translateY(-2px); box-shadow: 0 18px 40px rgba(0,0,0,0.28); }
+  #welcome button:hover { background: var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,0.16); }
   @keyframes pop {
-    from { opacity: 0; transform: translateY(14px) scale(0.96); }
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
     to   { opacity: 1; transform: translateY(0) scale(1); }
   }
 
   /* --- Loading screen --- */
   #loader {
     position: fixed; inset: 0; z-index: 60;
-    background: var(--brand-grad);
+    background: var(--bg);
     display: none; align-items: center; justify-content: center;
     flex-direction: column; gap: 18px;
     transition: opacity 0.45s ease;
@@ -236,66 +267,79 @@
   #loader.show { display: flex; }
   #loader.hide { opacity: 0; pointer-events: none; }
   #loader .ring {
-    width: 56px; height: 56px;
-    border: 4px solid rgba(255,255,255,0.3);
-    border-top-color: white;
+    width: 48px; height: 48px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
     border-radius: 50%;
-    animation: spin 0.9s linear infinite;
+    animation: spin 0.8s linear infinite;
   }
   #loader .label {
-    color: white; font-size: 13px; letter-spacing: 1.5px;
-    text-transform: uppercase; opacity: 0.9;
+    color: var(--text-light); font-size: 12px; letter-spacing: 1px;
+    text-transform: uppercase;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* --- Password modal --- */
   #pw-modal {
     position: fixed; inset: 0; z-index: 70;
-    background: rgba(12, 16, 30, 0.55);
-    backdrop-filter: blur(6px);
+    background: rgba(42, 37, 32, 0.4);
+    backdrop-filter: blur(4px);
     display: none; align-items: center; justify-content: center;
   }
   #pw-modal.show { display: flex; }
   #pw-modal .panel {
-    background: white; border-radius: 16px;
-    padding: 28px 32px; width: 360px; max-width: 92vw;
-    box-shadow: 0 30px 80px rgba(0,0,0,0.35);
+    background: white; border-radius: 0;
+    padding: 36px 40px; width: 400px; max-width: 92vw;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
     animation: pop 0.25s ease-out both;
+    border: 1px solid var(--border);
   }
-  #pw-modal h2 { font-size: 20px; margin-bottom: 4px; color: #1f2330; }
-  #pw-modal .lede { font-size: 13px; color: #5b6473; line-height: 1.55; margin-bottom: 16px; }
-  #pw-modal label { display: block; font-size: 12px; color: #5b6473; margin-bottom: 6px; letter-spacing: 0.4px; }
+  #pw-modal h2 { font-size: 22px; margin-bottom: 6px; color: var(--text); font-weight: 700; }
+  #pw-modal .lede { font-size: 13px; color: var(--text-light); line-height: 1.6; margin-bottom: 20px; }
+  #pw-modal label { display: block; font-size: 12px; color: var(--text); margin-bottom: 8px; font-weight: 600; letter-spacing: 0.3px; }
   #pw-modal input {
-    width: 100%; border: 1px solid #d9dde6; border-radius: 10px;
-    padding: 12px 14px; font-size: 14px; outline: none;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    width: 100%; border: 1px solid var(--border); border-radius: 0;
+    padding: 10px 12px; font-size: 14px; outline: none; background: white;
+    transition: all 0.15s;
+    margin-bottom: 16px;
   }
-  #pw-modal input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(102,126,234,0.18); }
+  #pw-modal input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(102,126,234,0.1); }
   #pw-modal .err {
     display: none; color: #c0392b; font-size: 12px;
     margin-top: 8px; line-height: 1.45;
   }
   #pw-modal .err.show { display: block; }
   #pw-modal .row {
-    display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px;
+    display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;
   }
   #pw-modal button {
-    border-radius: 10px; padding: 9px 18px; font-size: 13px; font-weight: 600;
-    cursor: pointer; border: 1px solid transparent;
-    transition: transform 0.12s, background 0.12s;
+    border-radius: 0; padding: 10px 20px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border);
+    transition: all 0.12s;
   }
   #pw-modal button.cancel {
-    background: #f2f4f9; color: #1f2330; border-color: #e3e8f0;
+    background: white; color: var(--text);
   }
-  #pw-modal button.cancel:hover { background: #e6eaf3; }
+  #pw-modal button.cancel:hover { background: var(--border); }
   #pw-modal button.primary {
-    background: var(--brand-grad); color: white; border: none;
+    background: var(--text); color: white; border-color: var(--text);
   }
-  #pw-modal button.primary:hover { transform: translateY(-1px); }
+  #pw-modal button.primary:hover { background: var(--accent); border-color: var(--accent); }
 
-  /* Polish: 'Coming soon' tiles — keep glyphs consistent length. */
-  .tile .glyph { letter-spacing: 0.3px; padding: 0 4px; min-width: 38px; }
-  .tile .name { line-height: 1.25; }
+  @media (max-width: 768px) {
+    .actions {
+      grid-template-columns: 1fr;
+    }
+    .action#act-drone {
+      grid-row: auto;
+    }
+    .hero {
+      max-width: 100%;
+    }
+    .grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
 </style>
 </head>
 <body>
@@ -309,29 +353,26 @@
     </div>
   </div>
   <nav>
-    <div class="theme-bar">
-      <input type="color" id="theme-accent" value="#667eea" title="Accent" />
-      <input type="color" id="theme-accent2" value="#764ba2" title="Edge" />
-      <span class="swatches" id="theme-swatches"></span>
-    </div>
     <a href="about.html">About</a>
   </nav>
 </header>
 
 <main>
   <div class="hero">
-    <h1>Pick a simulator</h1>
-    <p class="lede">Build a robotic arm from scratch, fly a quadrotor over real-world map terrain, or load a saved project.</p>
+    <h1>Robotics Simulation</h1>
+    <p class="lede">A toolkit for designing, animating, and controlling robotic systems. Build from first principles, script complex behaviors, export to real hardware.</p>
   </div>
 
   <div class="actions">
     <div class="action" id="act-drone">
       <div class="head">
         <div class="badge">UAV</div>
-        <h2>Drone Simulator</h2>
+        <div>
+          <h2>Drone Simulator</h2>
+          <div class="meta">Available</div>
+        </div>
       </div>
-      <p>Fly a quadrotor with tunable PIDs over real 3D terrain. Trace flight paths and export the mission to a real drone.</p>
-      <div class="meta">Available</div>
+      <p>Design and fly quadrotor missions over 3D terrain. Build flight paths with tunable PID controllers. Export flight plans to real drones.</p>
     </div>
 
     <div class="action" id="act-arm">
@@ -339,33 +380,33 @@
         <div class="badge">ARM</div>
         <h2>Robotic Arm</h2>
       </div>
-      <p>Open the 6-DOF arm sandbox. Build joints, mount end effectors, run scripts, save to JSON.</p>
+      <p>Construct a 6-DOF robotic arm. Script trajectories, add end effectors, run physics simulations, export configurations.</p>
       <div class="meta">Available</div>
     </div>
 
-    <div class="action tagged" id="act-dose">
+    <div class="action" id="act-dose">
       <div class="head">
         <div class="badge">DOSE</div>
         <h2>Dose Robot</h2>
       </div>
-      <p>Drive a SCARA-armed mobile robot through a hospital ward. Pick up vials and pill bottles, deliver to the bedside.</p>
+      <p>Control a SCARA-armed mobile base through a simulated hospital. Navigate cluttered spaces, manipulate objects, solve delivery tasks.</p>
       <div class="meta">Password required</div>
     </div>
 
     <div class="action" id="act-load">
       <div class="head">
         <div class="badge">{ }</div>
-        <h2>Load Saved Project</h2>
+        <h2>Load Project</h2>
       </div>
-      <p>Open a saved <code>.json</code> robot configuration and jump straight back into the arm simulator.</p>
+      <p>Open a saved JSON configuration to continue work on existing robot designs and simulations.</p>
       <div class="meta">From file</div>
     </div>
   </div>
 
   <div class="platforms">
     <div class="head">
-      <h2>Coming soon</h2>
-      <span class="lede">More platforms in development.</span>
+      <h2>In development</h2>
+      <span class="lede">Additional platforms coming soon</span>
     </div>
     <div class="grid">
       <div class="tile">
@@ -380,7 +421,7 @@
       </div>
       <div class="tile">
         <div class="glyph">AGV</div>
-        <div class="name">Mobile&nbsp;Base</div>
+        <div class="name">Mobile Base</div>
         <div class="status">Locked</div>
       </div>
       <div class="tile">
@@ -392,7 +433,7 @@
   </div>
 
   <footer>
-    <span>Made by Rishik Saravanan &middot; <a href="about.html" style="color:white;">About the project</a></span>
+    <span>Made by Rishik Saravanan &nbsp; &middot; &nbsp; <a href="about.html">Learn more</a></span>
   </footer>
 </main>
 
@@ -475,19 +516,11 @@
     Sound.ok();
     localStorage.setItem(WELCOME_KEY, '1');
     welcome.classList.add('hide');
-    loader.classList.add('show');
-    setTimeout(() => {
-      welcome.hidden = true;
-      loader.classList.add('hide');
-      setTimeout(() => loader.classList.remove('show', 'hide'), 500);
-    }, 900);
+    setTimeout(() => { welcome.hidden = true; }, 500);
   });
 
   function navigate(url) {
-    loader.classList.add('show');
-    requestAnimationFrame(() => {
-      setTimeout(() => { window.location.href = url; }, 250);
-    });
+    window.location.href = url;
   }
 
   // ----- Password modal for the dose sim -----

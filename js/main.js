@@ -792,6 +792,7 @@ async function bootInitialContent() {
   app.loadPreset('6dof');
 }
 
+Loading.show('Loading simulator…', 120);
 try {
   await bootInitialContent();
   ui.refreshAll();
