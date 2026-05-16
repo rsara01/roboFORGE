@@ -472,37 +472,6 @@
   import { Sound } from './js/sound.js';
 
   const fileInput = document.getElementById('json-input');
-  const accentEl = document.getElementById('theme-accent');
-  const accent2El = document.getElementById('theme-accent2');
-  const swatchesEl = document.getElementById('theme-swatches');
-
-  const t = Theme.load();
-  accentEl.value = t.accent;
-  accent2El.value = t.accent2;
-
-  const PRESETS = [
-    { a: '#667eea', b: '#764ba2', name: 'Indigo' },
-    { a: '#11998e', b: '#38ef7d', name: 'Emerald' },
-    { a: '#ee0979', b: '#ff6a00', name: 'Sunset' },
-    { a: '#2193b0', b: '#6dd5ed', name: 'Ocean' },
-    { a: '#373b44', b: '#4286f4', name: 'Steel' },
-    { a: '#c31432', b: '#240b36', name: 'Crimson' },
-  ];
-  for (const p of PRESETS) {
-    const el = document.createElement('span');
-    el.className = 'swatch';
-    el.style.background = `linear-gradient(135deg, ${p.a}, ${p.b})`;
-    el.title = p.name;
-    el.addEventListener('click', () => {
-      accentEl.value = p.a;
-      accent2El.value = p.b;
-      Theme.set({ accent: p.a, accent2: p.b });
-      Sound.click();
-    });
-    swatchesEl.appendChild(el);
-  }
-  accentEl.addEventListener('input', () => Theme.set({ accent: accentEl.value }));
-  accent2El.addEventListener('input', () => Theme.set({ accent2: accent2El.value }));
 
   // ----- Welcome (first-visit) + load screen -----
   const WELCOME_KEY = 'roboforge.seenWelcome';
