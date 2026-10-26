@@ -30,6 +30,28 @@ export function robotToJSON(robot) {
   };
 }
 
+/**
+ * Save format v4 for an imported URDF robot. The URDF text travels in the
+ * file; the meshes don't (they can be tens of MB), so `packageKey` points at
+ * the copy this browser kept in IndexedDB when the robot was imported.
+ */
+export function urdfArmToJSON(arm) {
+  return {
+    version: 4,
+    kind: 'urdf',
+    name: arm.name,
+    fileName: arm.fileName,
+    urdfPath: arm.urdfPath,
+    packageKey: arm.packageKey,
+    tipLink: arm.tipLink,
+    urdfText: arm.urdfText,
+    gripperOpen: arm.gripperOpen,
+    colors: { ...arm.colors },
+    joints: arm.joints.map(j => ({ urdf: j.urdfName, name: j.name, value: j.value, min: j.min, max: j.max })),
+    endEffectors: arm.endEffectors.filter(ee => !ee.urdfBuiltin).map(ee => ({ type: ee.type, params: { ...ee.params } })),
+  };
+}
+
 export function jsonToRobot(robot, data, makeEE) {
   robot.clear();
   if (!data || !Array.isArray(data.joints)) return;

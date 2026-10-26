@@ -199,6 +199,19 @@ const gripper = (open01) => {
     };
 
     const resetBlocks = () => physics?.resetBlocks();
+    // Put a block wherever you like (handy for small arms that can't reach the
+    // default ones). x/z in metres, size is the edge length.
+    const BLOCK_COLORS = [0xffaa55, 0x55ddaa, 0xaaaaff, 0xff6688, 0xeedd55];
+    let blockN = 0;
+    const spawnBlock = (x, z, size = 0.06, color) => {
+      if (!physics) return null;
+      const c = color ?? BLOCK_COLORS[blockN++ % BLOCK_COLORS.length];
+      physics.spawnBox(new THREE.Vector3(x, size / 2 + 0.01, z), size, c);
+      this.app?.ui?.refreshBlocksList?.();
+      return { x, y: size / 2, z, size };
+    };
+    const clearBlocks = () => { physics?.removeAll(); blockN = 0; };
+    const jointNames = () => robot.joints.map(j => j.name);
     const physicsOn = (on = true) => physics?.setEnabled(!!on);
 
     const app = this.app;
@@ -216,7 +229,7 @@ const gripper = (open01) => {
       setJoint, getJoint, getAllJoints,
       moveTo, moveLinear, ikTo, wait,
       gripper, suction, weld, drill, magnet, laser, paint,
-      grab, release, scan, blocks, resetBlocks, physicsOn,
+      grab, release, scan, blocks, resetBlocks, spawnBlock, clearBlocks, jointNames, physicsOn,
       conveyor, conveyorOn, resizeConveyor, robots, robotPos,
       log,
       THREE,

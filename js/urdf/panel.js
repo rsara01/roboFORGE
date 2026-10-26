@@ -1,35 +1,39 @@
 /**
  * The URDF tab in the Arm Lab: drop a .zip, a folder or loose files, pick
- * which URDF to show if there are several, then pose it with sliders or by
- * dragging a link in the 3D view. Problems found while parsing (missing
- * meshes, broken trees, bad limits) are listed instead of failing silently.
+ * which URDF to use if there are several, and the robot becomes the active
+ * arm, so the inspector, IK, scripts, recording and grabbing all drive it.
+ * This tab shows what was imported (problems, tool tip, joint roles, files)
+ * and lets you pose the robot by dragging its parts in the 3D view.
  */
 
 import * as THREE from 'three';
-import { VFS, vfsFromFiles, filesFromDrop, baseOf } from './vfs.js';
-import { parseURDF, movableJoints } from './parse.js';
+import { vfsFromFiles, filesFromDrop, baseOf, VFS } from './vfs.js';
+import { parseURDF } from './parse.js';
 import { UrdfRobot } from './build.js';
+import { packageKey, savePackage, loadPackage } from './store.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const fmtBytes = (n) => n > 1e6 ? (n / 1e6).toFixed(1) + ' MB' : n > 1e3 ? Math.round(n / 1e3) + ' KB' : n + ' B';
+const ROLE = { arm: 'arm', gripper: 'gripper', other: 'extra' };
 
 export class UrdfPanel {
   /**
-   * @param {{ scene: THREE.Scene, camera: THREE.PerspectiveCamera, orbit: any, renderer: THREE.WebGLRenderer,
-   *           dropTarget: HTMLElement, onActive: (on: boolean) => void,
-   *           loadOwnURDF: (text: string) => Promise<void>, loading: { show(msg?: string): void, hide(): void } }} ctx
+   * @param {{ camera: THREE.PerspectiveCamera, orbit: any, renderer: THREE.WebGLRenderer, dropTarget: HTMLElement,
+   *           loading: { show(msg?: string): void, hide(): void },
+   *           active: () => any, adopt: (urdf: UrdfRobot, meta: object) => any, remove: (arm: any) => void,
+   *           loadOwnURDF: (text: string) => Promise<void>, jointsChanged: () => void }} ctx
    */
   constructor(ctx) {
     this.ctx = ctx;
-    this.robot = null;          // UrdfRobot on screen
-    this.vfs = null;
-    this.sliders = new Map();   // joint name → { input, out }
     this._wire();
     this._wireDrag();
   }
 
-  get active() { return !!this.robot; }
+  /** The active arm if it's an imported one. */
+  get arm() { const a = this.ctx.active(); return a?.isUrdf ? a : null; }
+  /** The active imported robot's scene tree (kept for scripts and tests). */
+  get robot() { return this.arm?.urdf || null; }
 
   // ---------- input ----------
 
@@ -38,10 +42,10 @@ export class UrdfPanel {
     $('urdf-pick-folder').addEventListener('click', () => { $('urdf-folder').value = ''; $('urdf-folder').click(); });
     $('urdf-files').addEventListener('change', (e) => this.openFiles([...e.target.files]));
     $('urdf-folder').addEventListener('change', (e) => this.openFiles([...e.target.files]));
-    $('urdf-file-select').addEventListener('change', (e) => this.show(e.target.value));
-    $('urdf-home').addEventListener('click', () => { this.robot?.setAll(this.robot.homePose()); this._syncSliders(); });
+    $('urdf-file-select').addEventListener('change', (e) => { const a = this.arm; if (a) this.show(a.urdf.vfs, e.target.value); });
+    $('urdf-tip').addEventListener('change', (e) => { this.arm?.setTipLink(e.target.value); this.ctx.jointsChanged(); this.refresh(); });
     $('urdf-frame').addEventListener('click', () => this.frame());
-    $('urdf-close').addEventListener('click', () => this.close());
+    $('urdf-close').addEventListener('click', () => { const a = this.arm; if (a) this.ctx.remove(a); this.refresh(); });
     for (const key of ['visual', 'collision', 'frames', 'axes', 'com']) {
       $(`urdf-show-${key}`).addEventListener('change', (e) => this.robot?.setShow(key, e.target.checked));
     }
@@ -81,18 +85,12 @@ export class UrdfPanel {
       // RoboForge's own exports go back into the editable arm.
       const first = vfs.text(urdfs[0]);
       if (urdfs.length === 1 && /<robot\s+name="roboforge_arm"/.test(first)) {
-        this.close();
         await this.ctx.loadOwnURDF(first);
         this._status(`Loaded ${baseOf(urdfs[0])} into the editable arm.`);
+        this.refresh();
         return;
       }
-      this.vfs?.dispose();
-      this.vfs = vfs;
-      const sel = $('urdf-file-select');
-      sel.innerHTML = urdfs.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
-      $('urdf-file-row').hidden = urdfs.length < 2;
-      this._listFiles();
-      await this.show(urdfs.find(p => /\.urdf$/i.test(p)) || urdfs[0]);
+      await this.show(vfs, urdfs.find(p => /\.urdf$/i.test(p)) || urdfs[0]);
     } catch (err) {
       console.warn('[RoboForge] URDF import failed:', err);
       this._status(err.message, true);
@@ -101,52 +99,62 @@ export class UrdfPanel {
     }
   }
 
-  /** Parse, build and show one URDF from the current package. */
-  async show(path) {
-    const text = this.vfs.text(path);
-    $('urdf-file-select').value = path;
+  /**
+   * Parse and build one URDF from a package, then make it the active arm.
+   * @param {VFS} vfs
+   * @param {string} path
+   * @param {object} [restore]  saved state from a .json (joint values, tool tip, end effectors)
+   */
+  async show(vfs, path, restore = null) {
+    const text = vfs.text(path);
     this.ctx.loading.show('Reading URDF…');
     try {
       const model = parseURDF(text);
       if (!model.root) throw new Error(model.problems.find(p => p.level === 'error')?.msg || 'No base link.');
-      const next = new UrdfRobot(model, this.vfs, path);
-      await next.build((done, total) => total && this.ctx.loading.show(`Loading meshes ${done}/${total}…`));
-      if (this.robot) this._removeRobot();
-      this.robot = next;
-      for (const key of Object.keys(next.show)) next.setShow(key, $(`urdf-show-${key}`).checked);
-      this.ctx.scene.add(next.group);
-      this.ctx.onActive(true);
-      this._render(path);
+      const built = new UrdfRobot(model, vfs, path);
+      await built.build((done, total) => total && this.ctx.loading.show(`Loading meshes ${done}/${total}…`));
+      for (const key of Object.keys(built.show)) built.setShow(key, $(`urdf-show-${key}`).checked);
+      const key = packageKey(vfs, path);
+      this.ctx.adopt(built, { fileName: baseOf(path), urdfText: text, urdfPath: path, packageKey: key, restore });
+      if (!restore) savePackage(key, vfs);        // remember it for saved .json files
+      this._status('');
+      this.refresh();
       this.frame();
+      return true;
     } catch (err) {
       console.warn('[RoboForge] URDF build failed:', err);
       this._status(err.message, true);
+      return false;
     } finally {
       this.ctx.loading.hide();
     }
   }
 
-  _removeRobot() {
-    // The VFS belongs to the package, not the robot, so keep it for the next show().
-    this.robot.vfs = new VFS();
-    this.robot.dispose();
-    this.robot = null;
+  /**
+   * Rebuild an imported robot from a saved .json (version 4, kind "urdf").
+   * Uses the package remembered in this browser; without it the robot still
+   * loads from the saved URDF text, just without its meshes.
+   */
+  async restore(data) {
+    const files = data.packageKey ? await loadPackage(data.packageKey) : null;
+    const vfs = new VFS();
+    if (files) for (const [p, b] of files) vfs.add(p, b);
+    else vfs.add(data.urdfPath || data.fileName || 'robot.urdf', new TextEncoder().encode(data.urdfText || ''));
+    const path = data.urdfPath && vfs.files.has(data.urdfPath) ? data.urdfPath : vfs.robotFiles()[0];
+    if (!path) throw new Error('This save has no URDF in it.');
+    const ok = await this.show(vfs, path, data);
+    if (ok && !files) this._status(`Loaded ${data.name || 'the robot'} without its meshes: this browser doesn't have its package. Import the .zip again to see it properly.`, true);
+    return ok;
   }
 
-  close() {
-    if (this.robot) this._removeRobot();
-    this.vfs?.dispose(); this.vfs = null;
-    $('urdf-loaded').hidden = true;
-    this.ctx.onActive(false);
-  }
-
-  /** Point the camera at the whole robot. */
+  /** Point the camera at the active imported robot. */
   frame() {
-    if (!this.robot) return;
+    const a = this.arm;
+    if (!a) return;
     const { camera, orbit } = this.ctx;
-    this.robot.group.updateWorldMatrix(true, true);
+    a.rootGroup.updateWorldMatrix(true, true);
     const box = new THREE.Box3();
-    this.robot.group.traverse(o => { if (o.isMesh && o.visible && !o.parent?.isArrowHelper) box.expandByObject(o); });
+    a.urdf.group.traverse(o => { if (o.isMesh && o.visible && !o.parent?.isArrowHelper) box.expandByObject(o); });
     if (box.isEmpty()) box.setFromCenterAndSize(new THREE.Vector3(0, 0.3, 0), new THREE.Vector3(0.6, 0.6, 0.6));
     const c = box.getCenter(new THREE.Vector3());
     const r = box.getBoundingSphere(new THREE.Sphere()).radius;
@@ -169,14 +177,20 @@ export class UrdfPanel {
     el.hidden = !msg;
   }
 
-  _render(path) {
-    const R = this.robot, m = R.model;
-    $('urdf-loaded').hidden = false;
-    this._status('');
+  /** Show the active imported robot (or the empty state). Called when the active arm changes. */
+  refresh() {
+    const a = this.arm;
+    $('urdf-loaded').hidden = !a;
+    if (!a) return;
+    const R = a.urdf, m = R.model;
     $('urdf-name').textContent = m.name;
-    const movable = movableJoints(m);
     $('urdf-stats').textContent =
-      `${m.links.size} links · ${m.joints.size} joints (${movable.length} movable) · ${R.stats.meshes} meshes · ${Math.round(R.stats.triangles).toLocaleString()} triangles`;
+      `${m.links.size} links · ${m.joints.size} joints · ${R.stats.meshes} meshes · ${Math.round(R.stats.triangles).toLocaleString()} triangles`;
+    for (const key of Object.keys(R.show)) $(`urdf-show-${key}`).checked = R.show[key];
+
+    const urdfs = R.vfs.robotFiles();
+    $('urdf-file-row').hidden = urdfs.length < 2;
+    $('urdf-file-select').innerHTML = urdfs.map(p => `<option value="${esc(p)}" ${p === R.urdfPath ? 'selected' : ''}>${esc(p)}</option>`).join('');
 
     // Problems: missing files first, they're the usual reason a robot looks wrong.
     const probs = [
@@ -187,53 +201,30 @@ export class UrdfPanel {
     const box = $('urdf-problems');
     box.hidden = !probs.length;
     box.innerHTML = probs.length
-      ? `<p><strong>${probs.length} thing${probs.length === 1 ? '' : 's'} to check</strong> in ${esc(baseOf(path))}</p><ul>` +
+      ? `<p><strong>${probs.length} thing${probs.length === 1 ? '' : 's'} to check</strong> in ${esc(baseOf(R.urdfPath))}</p><ul>` +
         probs.slice(0, 40).map(p => `<li class="lvl-${p.level}">${esc(p.msg)}</li>`).join('') +
         (probs.length > 40 ? `<li>…and ${probs.length - 40} more</li>` : '') + '</ul>'
       : '';
 
-    // Joint sliders.
-    const host = $('urdf-joints');
-    host.innerHTML = '';
-    this.sliders.clear();
-    if (!movable.length) host.innerHTML = '<p class="hint">Nothing to move: every joint is fixed.</p>';
-    for (const j of movable) {
-      const [lo, hi] = R.range(j);
-      const row = document.createElement('div');
-      row.className = 'urdf-joint';
-      row.innerHTML = `<div class="head"><span class="name">${esc(j.name)}</span><span class="type">${j.type}</span><output></output></div>
-        <input type="range" min="${lo}" max="${hi}" step="${j.type === 'prismatic' ? 0.0005 : 0.001}" ${lo === hi ? 'disabled' : ''} />`;
-      const input = row.querySelector('input'), out = row.querySelector('output');
-      input.addEventListener('input', () => { R.setJoint(j.name, +input.value); this._syncSliders(); });
-      host.appendChild(row);
-      this.sliders.set(j.name, { input, out, joint: j });
-    }
+    // Tool tip and how each joint is used.
+    $('urdf-tip').innerHTML = [...m.links.keys()].map(n => `<option value="${esc(n)}" ${n === a.tipLink ? 'selected' : ''}>${esc(n)}</option>`).join('');
+    $('urdf-roles').innerHTML = a.joints.map((j, i) =>
+      `<li><span class="idx">${i}</span><span class="name">${esc(j.urdfName)}</span><span class="role role-${j.role}">${ROLE[j.role]}</span></li>`).join('')
+      || '<li>Nothing to move: every joint is fixed.</li>';
     const mimics = [...m.joints.values()].filter(j => j.mimic);
-    if (mimics.length) {
-      const p = document.createElement('p');
-      p.className = 'hint';
-      p.textContent = 'Follow other joints: ' + mimics.map(j => `${j.name} (${j.mimic.multiplier}× ${j.mimic.joint})`).join(', ') + '.';
-      host.appendChild(p);
-    }
-    this._syncSliders();
-    this._tree();
-  }
+    $('urdf-mimic').textContent = mimics.length
+      ? 'Following other joints: ' + mimics.map(j => `${j.name} (${j.mimic.multiplier}× ${j.mimic.joint})`).join(', ') + '.'
+      : '';
 
-  _syncSliders() {
-    for (const [name, s] of this.sliders) {
-      const v = this.robot.getJoint(name);
-      s.input.value = v;
-      s.out.textContent = s.joint.type === 'prismatic'
-        ? `${(v * 1000).toFixed(1)} mm`
-        : `${THREE.MathUtils.radToDeg(v).toFixed(1)}°`;
-    }
+    this._tree(m);
+    this._listFiles(R.vfs);
   }
 
   /** Link/joint tree, indented, like a ROS check_urdf printout. */
-  _tree() {
-    const m = this.robot.model;
+  _tree(m) {
     const lines = [];
     const walk = (link, depth) => {
+      if (depth > 512) return;
       lines.push(`<li style="--d:${depth}"><span class="link">${esc(link)}</span></li>`);
       for (const j of m.childJoints.get(link) || []) {
         lines.push(`<li style="--d:${depth + 1}" class="joint">${esc(j.name)} <span>${j.type}</span></li>`);
@@ -244,74 +235,65 @@ export class UrdfPanel {
     $('urdf-tree').innerHTML = lines.join('');
   }
 
-  _listFiles() {
-    const rows = [...this.vfs.files.entries()].sort(([a], [b]) => a.localeCompare(b));
+  _listFiles(vfs) {
+    const rows = [...vfs.files.entries()].sort(([a], [b]) => a.localeCompare(b));
     let total = 0;
     $('urdf-file-list').innerHTML = rows.map(([p, b]) => { total += b.byteLength; return `<li><span>${esc(p)}</span><span>${fmtBytes(b.byteLength)}</span></li>`; }).join('');
     $('urdf-file-count').textContent = `${rows.length} files, ${fmtBytes(total)}`;
   }
 
-  // ---------- drag a link to move its joint ----------
+  // ---------- drag a part of the active imported robot to move its joint ----------
 
   _wireDrag() {
     const { renderer, camera, orbit } = this.ctx;
     const el = renderer.domElement;
     const ray = new THREE.Raycaster();
     const ndc = new THREE.Vector2();
-    let drag = null;     // { J, origin, axis, plane, last, value, prismatic }
-    let hover = null;
+    let drag = null;     // { j, idx, origin, axis, plane, last, prismatic }
+    let hover = null;    // a joint entry of the active arm
 
     const pointer = (e) => {
       const r = el.getBoundingClientRect();
       ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
       ray.setFromCamera(ndc, camera);
     };
-    // The nearest movable joint at or above the link that was hit.
-    const jointFor = (obj) => {
-      if (!this.robot) return null;
-      let linkName = null;
-      for (let o = obj; o && !linkName; o = o.parent) if (this.robot.links.has(o.name) && this.robot.links.get(o.name).obj === o) linkName = o.name;
-      const m = this.robot.model;
-      for (let n = linkName; n && m.parentOf.has(n);) {
-        const j = m.parentOf.get(n);
-        if (this.sliders.has(j.name)) return this.robot.joints.get(j.name);
-        n = j.parent;
-      }
-      return null;
-    };
     const hit = () => {
-      if (!this.robot) return null;
-      const meshes = [];
-      this.robot.group.traverse(o => { if (o.isMesh) meshes.push(o); });
-      const h = ray.intersectObjects(meshes, false).find(h => {
-        for (let o = h.object; o; o = o.parent) if (!o.visible) return false;
-        return !h.object.parent?.isArrowHelper && !(h.object.parent?.isAxesHelper);
-      });
-      return h || null;
+      const a = this.arm;
+      if (!a) return null;
+      const h = ray.intersectObjects(a.pickableObjects(), false)
+        .find(h => { for (let o = h.object; o; o = o.parent) if (!o.visible) return false; return true; });
+      if (!h) return null;
+      const j = a.jointFromObject(h.object);
+      return j ? { j, point: h.point } : null;
     };
-    const setHover = (J) => {
-      if (hover === J) return;
-      const tint = (J, on) => J && J.motion.traverse(o => {
-        if (!o.isMesh || !o.material?.emissive) return;
-        if (on) { o.userData._e = o.material; o.material = o.material.clone(); o.material.emissive.setHex(0x4a2400); }
-        else if (o.userData._e) { o.material.dispose(); o.material = o.userData._e; delete o.userData._e; }
-      });
-      tint(hover, false); tint(J, true);
-      hover = J;
-      el.style.cursor = J ? 'grab' : '';
+    const tint = (j, on) => {
+      const a = this.arm;
+      if (!j || !a) return;
+      for (const L of a.urdf.links.values()) {
+        if (L.ownerJoint !== j) continue;
+        L.visual.traverse(o => {
+          if (!o.isMesh) return;
+          if (on && !o.userData._e && o.material?.emissive) { o.userData._e = o.material; o.material = o.material.clone(); o.material.emissive.setHex(0x4a2400); }
+          else if (!on && o.userData._e) { o.material.dispose(); o.material = o.userData._e; delete o.userData._e; }
+        });
+      }
+    };
+    const setHover = (j) => {
+      if (hover === j) return;
+      tint(hover, false); tint(j, true);
+      hover = j;
+      el.style.cursor = j ? 'grab' : '';
     };
 
     el.addEventListener('pointerdown', (e) => {
-      if (!this.robot || e.button !== 0) return;
+      if (e.button !== 0) return;
       pointer(e);
       const h = hit();
-      const J = h && jointFor(h.object);
-      if (!J) return;
-      const j = J.joint;
-      J.frame.updateWorldMatrix(true, false);
-      const origin = new THREE.Vector3().setFromMatrixPosition(J.frame.matrixWorld);
-      const q = J.frame.getWorldQuaternion(new THREE.Quaternion());
-      const axis = new THREE.Vector3(...j.axis).applyQuaternion(q).normalize();
+      if (!h) return;
+      const a = this.arm, j = h.j;
+      j.group.updateWorldMatrix(true, false);
+      const origin = new THREE.Vector3().setFromMatrixPosition(j.group.matrixWorld);
+      const axis = j.axisVec.clone().transformDirection(j.group.matrixWorld);
       const prismatic = j.type === 'prismatic';
       let plane;
       if (prismatic) {
@@ -324,34 +306,32 @@ export class UrdfPanel {
       }
       const start = ray.ray.intersectPlane(plane, new THREE.Vector3());
       if (!start) return;
-      e.stopImmediatePropagation();      // keep OrbitControls / the gizmo out of it
-      drag = { J, origin, axis, plane, last: start, prismatic };
+      e.stopImmediatePropagation();      // keep OrbitControls / the gizmo / arm picking out of it
+      drag = { j, idx: a.joints.indexOf(j), origin, axis, plane, last: start, prismatic };
       orbit.enabled = false;
       try { el.setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
       el.style.cursor = 'grabbing';
     }, true);
 
     el.addEventListener('pointermove', (e) => {
-      if (!this.robot) return;
       pointer(e);
-      if (!drag) { if (e.buttons === 0) { const h = hit(); setHover(h && jointFor(h.object)); } return; }
+      if (!drag) { if (e.buttons === 0) setHover(hit()?.j || null); return; }
+      const a = this.arm;
+      if (!a) { drag = null; orbit.enabled = true; return; }
       const p = ray.ray.intersectPlane(drag.plane, new THREE.Vector3());
       if (!p) return;
-      const { J, origin, axis } = drag;
+      const { j, origin, axis } = drag;
       let delta;
-      if (drag.prismatic) {
-        // Undo the robot's scale so a drag of 1 cm on screen slides 1 cm.
-        const s = new THREE.Vector3(); J.frame.matrixWorld.decompose(new THREE.Vector3(), new THREE.Quaternion(), s);
-        delta = p.clone().sub(drag.last).dot(axis) / (s.x || 1);
-      } else {
-        const a = drag.last.clone().sub(origin), b = p.clone().sub(origin);
-        a.sub(axis.clone().multiplyScalar(a.dot(axis))); b.sub(axis.clone().multiplyScalar(b.dot(axis)));
-        if (a.lengthSq() < 1e-10 || b.lengthSq() < 1e-10) { drag.last = p; return; }
-        delta = Math.atan2(a.clone().cross(b).dot(axis), a.dot(b));
+      if (drag.prismatic) delta = p.clone().sub(drag.last).dot(axis);
+      else {
+        const u = drag.last.clone().sub(origin), w = p.clone().sub(origin);
+        u.sub(axis.clone().multiplyScalar(u.dot(axis))); w.sub(axis.clone().multiplyScalar(w.dot(axis)));
+        if (u.lengthSq() < 1e-10 || w.lengthSq() < 1e-10) { drag.last = p; return; }
+        delta = Math.atan2(u.clone().cross(w).dot(axis), u.dot(w));
       }
-      this.robot.setJoint(J.joint.name, J.value + delta);
+      a.setJointValue(drag.idx, j.value + delta);   // same limits and collision checks as the sliders
       drag.last = p;
-      this._syncSliders();
+      this.ctx.jointsChanged();
     });
 
     const end = (e) => {

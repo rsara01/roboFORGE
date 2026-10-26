@@ -18,6 +18,7 @@ const LINK_DENSITY_PER_M = 1.2;
 const EE_MASS = 0.25;
 
 function massOfLink(j) {
+  if (j.link.mass > 0) return j.link.mass;      // imported robots carry real inertial masses
   return Math.max(0.05, LINK_DENSITY_PER_M * j.link.length * (1 + 4 * j.link.radius));
 }
 
@@ -60,7 +61,7 @@ export function computeJointTorques(robot, physics) {
     const j = robot.joints[i];
     const jointPos = worldOf(j.articulator, new THREE.Vector3());
 
-    const localAxis = AXIS_VECTOR[j.axis] || AXIS_VECTOR.y;
+    const localAxis = j.axisVec || AXIS_VECTOR[j.axis] || AXIS_VECTOR.y;
     const axisWorld = localAxis.clone().transformDirection(j.group.matrixWorld).normalize();
 
     let torque = 0;

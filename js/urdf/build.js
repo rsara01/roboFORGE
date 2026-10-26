@@ -313,13 +313,21 @@ export class UrdfRobot {
       const [lo, hi] = this.range(j);
       value = Math.min(hi, Math.max(lo, value));
     }
+    this.applyJoint(name, value);
+  }
+
+  /** Pose one joint without clamping (callers that own the limits use this), then its mimics. */
+  applyJoint(name, value, depth = 0) {
+    const J = this.joints.get(name);
+    if (!J || depth > 16) return;      // a mimic loop in the file stops here
+    const j = J.joint;
     J.value = value;
     const ax = new THREE.Vector3(...j.axis);
     if (j.type === 'revolute' || j.type === 'continuous') { J.motion.position.set(0, 0, 0); J.motion.quaternion.setFromAxisAngle(ax, value); }
     else if (j.type === 'prismatic') { J.motion.quaternion.identity(); J.motion.position.copy(ax).multiplyScalar(value); }
     for (const F of this.joints.values()) {
       const m = F.joint.mimic;
-      if (m && m.joint === name && F !== J) this.setJoint(F.joint.name, value * m.multiplier + m.offset);
+      if (m && m.joint === name && F !== J) this.applyJoint(F.joint.name, value * m.multiplier + m.offset, depth + 1);
     }
   }
 

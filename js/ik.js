@@ -42,6 +42,7 @@ export function solveIK(robot, target, options = {}) {
     let moved = 0;
     for (let i = robot.joints.length - 1; i >= 0; i--) {
       const j = robot.joints[i];
+      if (j.ikSkip) continue;          // fingers and other side joints of imported robots
       j.group.updateWorldMatrix(true, true);
       const before = j.value;
 
@@ -168,13 +169,15 @@ export function solveIKAvoidingCollisions(robot, target, options = {}) {
 
   // Candidate starting combinations: as-is, all-zero, mirrored, then a spread
   // of random poses across each joint's full range.
+  // Joints IK doesn't steer (an imported robot's fingers) keep their value in every seed.
+  const keep = (pose) => pose.map((v, i) => robot.joints[i].ikSkip ? startPose[i] : v);
   const seeds = [
     startPose.slice(),
-    new Array(n).fill(0),
-    startPose.map(v => -v),
+    keep(new Array(n).fill(0)),
+    keep(startPose.map(v => -v)),
   ];
   for (let k = 0; k < restarts; k++) {
-    seeds.push(robot.joints.map(j => THREE.MathUtils.lerp(j.min, j.max, Math.random())));
+    seeds.push(keep(robot.joints.map(j => THREE.MathUtils.lerp(j.min, j.max, Math.random()))));
   }
 
   const attempts = [];

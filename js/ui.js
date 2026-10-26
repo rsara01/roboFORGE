@@ -100,6 +100,10 @@ export class UI {
     document.querySelectorAll('.builder-btn[data-add]').forEach(btn => {
       btn.addEventListener('click', () => {
         const kind = btn.dataset.add;
+        if (ctx.robot.isUrdf) {
+          alert('An imported robot keeps the joints from its URDF. Pick a preset or press New to build your own arm.');
+          return;
+        }
         if (kind === 'revolute') ctx.robot.addJoint({ type: 'revolute' });
         else if (kind === 'prismatic') ctx.robot.addJoint({ type: 'prismatic' });
         else if (kind === 'link') {
@@ -332,7 +336,7 @@ export class UI {
       const dof = r.joints?.length || 0;
       card.innerHTML = `
         <span class="rb-tag">${i === activeIdx ? '●' : '○'}</span>
-        <span class="rb-name">Arm ${i + 1}</span>
+        <span class="rb-name">${r.isUrdf ? escapeHtml(r.name) : `Arm ${i + 1}`}</span>
         <span class="rb-dof">${dof} DoF</span>
         ${robots.length > 1 ? '<button class="x" title="Remove">×</button>' : ''}
       `;
@@ -343,7 +347,7 @@ export class UI {
       const xBtn = card.querySelector('button.x');
       if (xBtn) xBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (confirm(`Remove arm ${i + 1}?`)) this.ctx.removeRobot?.(i);
+        if (confirm(`Remove ${r.isUrdf ? r.name : `arm ${i + 1}`}?`)) this.ctx.removeRobot?.(i);
       });
       wrap.appendChild(card);
     });
@@ -428,7 +432,7 @@ export class UI {
 
     robot.endEffectors.forEach((ee, k) => {
       const tag = k === 0 ? 'EE' : 'AUX';
-      const eEl = makeNode(`<span class="badge">${tag}</span>${EE_LABELS[ee.type] || ee.type}`, 'ee', -1);
+      const eEl = makeNode(`<span class="badge">${tag}</span>${ee.label || EE_LABELS[ee.type] || ee.type}`, 'ee', -1);
       eEl.classList.add('ee');
       root.appendChild(eEl);
     });
@@ -507,6 +511,7 @@ export class UI {
     }
     const j = robot.joints[i];
     this.elements.selName.textContent = j.name;
+    if (robot.isUrdf) { this._urdfInspector(robot, j, i); return; }
     const linkColorHex = '#' + (j.link.color ?? robot.colors.link).toString(16).padStart(6, '0');
     const linkColorOverridden = j.link.color != null;
     insp.innerHTML = `
@@ -573,6 +578,39 @@ export class UI {
     });
   }
 
+  /** Inspector for a joint of an imported robot: its shape comes from the URDF, so only limits and value are editable. */
+  _urdfInspector(robot, j, i) {
+    const insp = this.elements.inspector;
+    const deg = (r) => (r * 180 / Math.PI).toFixed(1);
+    const unit = j.type === 'revolute' ? 'rad' : 'm';
+    const ax = j.axisVec.toArray().map(v => +v.toFixed(3)).join(' ');
+    const linkColorHex = '#' + (j.link.color ?? robot.colors.link ?? 0xb9bcc1).toString(16).padStart(6, '0');
+    insp.innerHTML = `
+      <div class="field"><label>Name</label><input type="text" id="i-name" value="${escapeHtml(j.name)}" style="width:110px"/></div>
+      <div class="field"><label>URDF joint</label><span>${escapeHtml(j.urdfName)}</span></div>
+      <div class="field"><label>Type</label><span>${j.urdfType}${j.role === 'arm' ? '' : ` (${j.role === 'gripper' ? 'gripper' : 'not used by IK'})`}</span></div>
+      <div class="field"><label>Axis</label><span>${ax}</span></div>
+      <div class="field"><label>Moves link</label><span>${(j.link.length * 100).toFixed(1)} cm to the next joint</span></div>
+      <div class="field"><label>Link color</label>
+        <span style="display:inline-flex;gap:4px;align-items:center;">
+          <input type="color" id="i-link-color" value="${linkColorHex}"/>
+          <button id="i-link-color-clear">${j.link.color != null ? 'reset' : '—'}</button>
+        </span>
+      </div>
+      <div class="field"><label>Min (${unit})</label><input type="number" step="0.05" id="i-min" value="${j.min.toFixed(3)}"/></div>
+      <div class="field"><label>Max (${unit})</label><input type="number" step="0.05" id="i-max" value="${j.max.toFixed(3)}"/></div>
+      <div class="field"><label>Value (${unit})</label><input type="number" step="0.01" id="i-val" value="${j.value.toFixed(3)}"/></div>
+      ${j.type === 'revolute' ? `<div class="field"><label></label><span>${deg(j.value)}° (limits ${deg(j.min)}° to ${deg(j.max)}°)</span></div>` : ''}
+      <p class="hint">Index ${i} in scripts: <code>setJoint(${i}, value)</code>.</p>
+    `;
+    insp.querySelector('#i-name').addEventListener('change', (e) => { j.name = e.target.value; this.refreshHierarchy(); this.refreshSliders(); });
+    insp.querySelector('#i-link-color').addEventListener('input', (e) => { j.link.color = parseInt(e.target.value.slice(1), 16); robot.rebuildJointGeometry(j); });
+    insp.querySelector('#i-link-color-clear').addEventListener('click', () => { j.link.color = null; robot.rebuildJointGeometry(j); this._urdfInspector(robot, j, i); });
+    insp.querySelector('#i-min').addEventListener('change', (e) => { j.min = parseFloat(e.target.value); this.refreshSliders(); });
+    insp.querySelector('#i-max').addEventListener('change', (e) => { j.max = parseFloat(e.target.value); this.refreshSliders(); });
+    insp.querySelector('#i-val').addEventListener('change', (e) => { robot.setJointValue(i, parseFloat(e.target.value)); this.refreshSliders(); });
+  }
+
   refreshEEList() {
     const robot = this.ctx.robot;
     const wrap = this.elements.eeList;
@@ -586,7 +624,7 @@ export class UI {
       const card = document.createElement('div');
       card.className = 'ee-card';
       const isPrimary = idx === 0;
-      const label = EE_LABELS[ee.type] || ee.type;
+      const label = ee.label || EE_LABELS[ee.type] || ee.type;
       card.innerHTML = `
         <div class="ee-head">
           <span class="ee-title">${isPrimary ? '<span class="pri-badge">PRIMARY</span>' : '<span class="pri-badge" style="background:#3a2c1c;color:#ffd5a8;">AUX</span>'} ${label}</span>

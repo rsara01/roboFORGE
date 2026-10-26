@@ -10,7 +10,7 @@
 
 import * as THREE from 'three';
 import { createScene } from './scene.js';
-import { Robot } from './robot.js';
+import { Robot, AXIS_VECTOR } from './robot.js';
 import { createEndEffector } from './endEffectors.js';
 import { solveIK, solveIKAvoidingCollisions, IKTracker } from './ik.js';
 import { ScriptRunner } from './scripting.js';
@@ -25,11 +25,12 @@ import { Theme } from './theme.js';
 import { Loading } from './loading.js';
 import {
   robotToJSON, jsonToRobot,
-  robotToURDF, urdfToRobot, urdfModel,
+  robotToURDF, urdfToRobot, urdfModel, urdfArmToJSON,
   downloadText, readFileAsText,
 } from './persistence.js';
 import { MeshLibrary } from './meshLibrary.js';
 import { UrdfPanel } from './urdf/panel.js';
+import { UrdfArm } from './urdf/arm.js';
 
 // Default "ready" joint angles for the RS arm (radians, J1..J6). The CAD ships
 // folded; this opens it to a natural presentation pose. Tuned in the viewer.
@@ -546,8 +547,8 @@ transform.attach(j.articulator);
     if (robots.length <= 1) return;
     const r = robots[idx];
     if (!r) return;
-    r.clear();
-    scene.remove(r.rootGroup);
+    if (r.isUrdf) r.dispose();
+    else { r.clear(); scene.remove(r.rootGroup); }
     robots.splice(idx, 1);
     if (activeRobotIdx >= robots.length) activeRobotIdx = robots.length - 1;
     this.setActiveRobot(activeRobotIdx);
@@ -562,6 +563,8 @@ transform.attach(j.articulator);
     scriptRunner.setRobot(robots[idx]);
     this.refreshUI();
     this._highlightActiveRobot();
+    this._syncModelUI();
+    urdfPanel.refresh();
   },
 
   _highlightActiveRobot() {
@@ -578,6 +581,7 @@ transform.attach(j.articulator);
   },
 
 loadPreset(name) {
+    if (robots[activeRobotIdx].isUrdf) { this._swapMeshSet(activeRobotIdx, 'procedural'); this.setActiveRobot(activeRobotIdx); }
     robot.clear();
     if (name === '6dof') {
       robot.addJoint({ type: 'revolute', axis: 'y', linkLength: 0.20, linkAxis: '+y' });
@@ -634,10 +638,13 @@ loadPreset(name) {
   _swapMeshSet(idx, wantSet, keepColors = true) {
     const old = robots[idx];
     const pos = old.rootGroup.position.clone();
-    const colors = { ...old.colors };
-    old.clear();
-    scene.remove(old.rootGroup);
-    this._disposeRobotVisuals(old);
+    const colors = old.isUrdf ? {} : { ...old.colors };
+    if (old.isUrdf) old.dispose();
+    else {
+      old.clear();
+      scene.remove(old.rootGroup);
+      this._disposeRobotVisuals(old);
+    }
     const r = new Robot(scene, { meshSet: wantSet });
     r.rootGroup.position.copy(pos);
     if (keepColors) for (const [k, v] of Object.entries(colors)) {
@@ -692,8 +699,9 @@ loadPreset(name) {
       Loading.hide(200);
     }
     const idx = activeRobotIdx;
-    const vals = robots[idx].joints.map(j => j.value);
-    const eeSpecs = robots[idx].endEffectors.map(ee => ({ type: ee.type, params: { ...ee.params } }));
+    const wasUrdf = !!robots[idx].isUrdf;
+    const vals = wasUrdf ? [] : robots[idx].joints.map(j => j.value);
+    const eeSpecs = robots[idx].endEffectors.filter(ee => !ee.urdfBuiltin).map(ee => ({ type: ee.type, params: { ...ee.params } }));
     const r = this._swapMeshSet(idx, want);
     if (want === 'procedural') this.loadPresetInto(r, '6dof');
     else this.buildRSModel(r);
@@ -727,6 +735,10 @@ loadPreset(name) {
 
   /** CAD-aware JSON load: preload the file's model, swap meshSet, then apply. */
   async loadRobotData(data, makeEE) {
+    if (data?.kind === 'urdf') {
+      if (!(await urdfPanel.restore(data))) throw new Error(document.getElementById('urdf-status').textContent || 'Could not rebuild the imported robot.');
+      return;
+    }
     const model = data && data.model && data.model !== 'procedural' ? data.model : null;
     let wantSet = 'procedural';
     if (model) {
@@ -813,7 +825,9 @@ loadPreset(name) {
   _syncModelUI() {
     const sel = document.getElementById('model-select');
     if (sel) sel.value = this.model;
-    this._setModelStatus(this.model === 'procedural'
+    if (robot.isUrdf) {
+      this._setModelStatus(`Imported ${robot.name}: ${robot.joints.length} joints, ${Math.round(robot.urdf.stats.triangles).toLocaleString()} triangles.`);
+    } else this._setModelStatus(this.model === 'procedural'
       ? 'Procedural primitives.'
       : `${this.model} CAD — ${robot.joints.length} joints, ${MeshLibrary.getManifest(this.model)?.totalTris ?? '?'} tris.`);
     // Gripper control appears only when the active arm has an articulated gripper.
@@ -942,10 +956,62 @@ runScript() {
   stopScript() { scriptRunner.stop(); },
 
 saveJSON() {
-    downloadText('robot.json', JSON.stringify(robotToJSON(robot), null, 2));
+    const r = robots[activeRobotIdx];
+    const data = r.isUrdf ? urdfArmToJSON(r) : robotToJSON(robot);
+    downloadText(r.isUrdf ? `${r.name}.json` : 'robot.json', JSON.stringify(data, null, 2));
   },
   exportURDF() {
-    downloadText('robot.urdf', robotToURDF(robot));
+    const r = robots[activeRobotIdx];
+    if (r.isUrdf) downloadText(r.fileName || `${r.name}.urdf`, r.urdfText);
+    else downloadText('robot.urdf', robotToURDF(robot));
+  },
+
+  /** Make a built imported robot the active arm (replacing whatever was there). */
+  adoptURDF(built, meta) {
+    const idx = activeRobotIdx;
+    const old = robots[idx];
+    const pos = old.rootGroup.position.clone();
+    const saved = meta.restore;
+    const arm = new UrdfArm(scene, built, { fileName: meta.fileName, urdfText: meta.urdfText, tipLink: saved?.tipLink });
+    arm.urdfPath = meta.urdfPath;
+    arm.packageKey = meta.packageKey;
+    arm.rootGroup.position.copy(pos);
+    if (old.isUrdf) old.dispose();
+    else { old.clear(); scene.remove(old.rootGroup); this._disposeRobotVisuals(old); }
+    robots[idx] = arm;
+    if (saved) {
+      for (const sj of saved.joints || []) {
+        const j = arm.joints.find(x => x.urdfName === sj.urdf);
+        if (!j) continue;
+        if (typeof sj.min === 'number') j.min = sj.min;
+        if (typeof sj.max === 'number') j.max = sj.max;
+        if (sj.name) j.name = sj.name;
+        j.value = THREE.MathUtils.clamp(sj.value ?? 0, j.min, j.max);
+        arm._applyJointTransform(j);
+      }
+      if (typeof saved.gripperOpen === 'number') arm.setGripperOpen(saved.gripperOpen);
+      for (const spec of saved.endEffectors || []) {
+        const ee = createEndEffector(spec.type);
+        if (!ee) continue;
+        for (const [k, v] of Object.entries(spec.params || {})) ee.setParam?.(k, v);
+        arm.addEndEffector(ee);
+      }
+      if (saved.colors?.link != null) arm.setColor('link', saved.colors.link);
+    }
+    this.setActiveRobot(idx);
+    this.onSelect(null);
+    return arm;
+  },
+
+  /** Take an imported robot out: drop it from the list, or swap in a built-in arm if it's the only one. */
+  removeURDF(arm) {
+    const idx = robots.indexOf(arm);
+    if (idx < 0) return;
+    if (robots.length > 1) { this.removeRobot(idx); return; }
+    const r = this._swapMeshSet(idx, 'procedural');
+    this.loadPresetInto(r, '6dof');
+    this.setActiveRobot(idx);
+    this._frameActiveRobot();
   },
   loadFromFile(kind, onSuccess, onError) {
     if (kind === 'urdf') { urdfPanel.pickFiles(); return; }
@@ -1018,10 +1084,10 @@ _stepOnce(dt) {
 
 scriptRunner.app = app;
 
-// Imported URDF robots are shown on their own: the built-in arms (and the IK
-// target that drives them) step aside until the URDF is closed.
+// Imported URDF robots become ordinary arms in `robots`, so IK, scripts,
+// grabbing, recording and the inspector all work on them.
 const urdfPanel = new UrdfPanel({
-  scene, camera, orbit, renderer,
+  camera, orbit, renderer,
   dropTarget: document.getElementById('viewport-wrap'),
   loading: {
     show(msg) {
@@ -1031,24 +1097,24 @@ const urdfPanel = new UrdfPanel({
     },
     hide() { Loading.hide(); },
   },
+  active: () => robots[activeRobotIdx],
+  adopt: (built, meta) => app.adoptURDF(built, meta),
+  remove: (arm) => app.removeURDF(arm),
   loadOwnURDF: async (text) => {
     const makeEE = (t) => { const ee = createEndEffector(t); if (ee) robot.addEndEffector(ee); return ee; };
     await app.loadURDFData(text, makeEE);
     app.onSelect(null);
     app.refreshUI();
   },
-  onActive(on) {
-    for (const r of robots) r.rootGroup.visible = !on;
-    if (on) { transform.detach(); ikTracker.stop?.(); ikTarget.group.visible = false; }
-    else ikTarget.group.visible = document.getElementById('ik-show-target')?.checked ?? true;
-    document.body.classList.toggle('urdf-active', on);
-  },
+  jointsChanged: () => { ui.refreshSliders(); ui.refreshInspector(); },
 });
-
 app.urdf = urdfPanel;
 
 const ui = new UI({
   ...app,
+  // The spread above copies values once; these two change, so read them live.
+  get selected() { return app.selected; },
+  get activeRobotIdx() { return activeRobotIdx; },
 
   onSelect: (i) => app.onSelect(i),
   refreshUI: () => app.refreshUI(),
@@ -1147,7 +1213,7 @@ try {
 }
 
 renderer.domElement.addEventListener('pointerdown', (e) => {
-  if (transform.dragging || urdfPanel.active) return;
+  if (transform.dragging) return;
 
   const candidates = [];
   for (const r of robots) candidates.push(...r.pickableObjects());
@@ -1187,15 +1253,16 @@ transform.addEventListener('objectChange', () => {
   if (!j) return;
 
   const oldValue = j.value;
+  // Read the gizmo back along the joint's own axis (CAD and URDF joints don't
+  // turn about a cardinal axis), then re-apply so anything off-axis is dropped.
+  const axis = j.axisVec || AXIS_VECTOR[j.axis];
   if (j.type === 'revolute') {
-    const e = new THREE.Euler().setFromQuaternion(j.articulator.quaternion, 'XYZ');
-    const v = j.axis === 'x' ? e.x : (j.axis === 'y' ? e.y : e.z);
+    const q = j.articulator.quaternion;
+    const v = 2 * Math.atan2(q.x * axis.x + q.y * axis.y + q.z * axis.z, q.w);
     j.value = THREE.MathUtils.clamp(v, j.min, j.max);
     robot._applyJointTransform(j);
   } else {
-    const p = j.articulator.position;
-    const v = j.axis === 'x' ? p.x : (j.axis === 'y' ? p.y : p.z);
-    j.value = THREE.MathUtils.clamp(v, j.min, j.max);
+    j.value = THREE.MathUtils.clamp(j.articulator.position.dot(axis), j.min, j.max);
     robot._applyJointTransform(j);
   }
   if (robot._hasViolation()) {

@@ -745,5 +745,9 @@ body.mobile-blocked { overflow: hidden; }
 .urdf-files li { display: flex; justify-content: space-between; gap: 8px; }
 .urdf-files li span:first-child { word-break: break-all; }
 .urdf-files li span:last-child { color: var(--fg-dim); white-space: nowrap; }
-body.urdf-active .overlay-info,
-body.urdf-active .overlay-gizmo-mode { display: none; }
+.urdf-roles { list-style: none; margin: 0; padding: 0; font: 11px/1.7 ui-monospace, Menlo, Consolas, monospace; }
+.urdf-roles li { display: flex; gap: 8px; align-items: baseline; }
+.urdf-roles .idx { color: var(--fg-dim); min-width: 1.5em; text-align: right; }
+.urdf-roles .name { color: var(--fg); word-break: break-all; }
+.urdf-roles .role { margin-left: auto; color: var(--fg-dim); }
+.urdf-roles .role-gripper { color: #f08327; }

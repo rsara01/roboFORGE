@@ -113,6 +113,7 @@
           <select id="model-select">
             <option value="procedural">Procedural</option>
             <option value="RS">RS (CAD)</option>
+            <option value="urdf" disabled>Imported URDF</option>
           </select>
         </label>
       </div>
@@ -267,7 +268,7 @@
 
     <div class="tab-panel" data-panel="script">
       <h3>Scripting Panel</h3>
-      <p class="hint">JavaScript with helpers: <code>setJoint(i,val)</code>, <code>getJoint(i)</code>, <code>moveTo(i,val,dur)</code>, <code>moveLinear([…],dur)</code>, <code>wait(s)</code>, <code>ikTo(x,y,z,dur)</code>, <code>gripper(o)</code>, <code>suction(b)</code>, <code>weld(b)</code>, <code>drill(b)</code>, <code>magnet(b)</code>, <code>laser(b)</code>, <code>paint(b,color?)</code>, <code>scan()</code>, <code>blocks()</code>, <code>grab()</code>, <code>release()</code>, <code>resetBlocks()</code>, <code>physicsOn()</code>, <code>log(x)</code>.</p>
+      <p class="hint">JavaScript with helpers: <code>setJoint(i,val)</code>, <code>getJoint(i)</code>, <code>moveTo(i,val,dur)</code>, <code>moveLinear([…],dur)</code>, <code>wait(s)</code>, <code>ikTo(x,y,z,dur)</code>, <code>gripper(o)</code>, <code>suction(b)</code>, <code>weld(b)</code>, <code>drill(b)</code>, <code>magnet(b)</code>, <code>laser(b)</code>, <code>paint(b,color?)</code>, <code>scan()</code>, <code>blocks()</code>, <code>grab()</code>, <code>release()</code>, <code>resetBlocks()</code>, <code>spawnBlock(x,z,size)</code>, <code>clearBlocks()</code>, <code>jointNames()</code>, <code>physicsOn()</code>, <code>log(x)</code>.</p>
       <div class="row">
         <label>Examples
           <select id="script-example">
@@ -362,7 +363,7 @@ run();
     <div class="tab-panel" data-panel="urdf">
       <h3>Import a robot (URDF)</h3>
       <div id="urdf-drop" class="urdf-drop">
-        <p>Drop a <b>.zip</b>, a <b>folder</b>, or a <b>.urdf</b> with its mesh files here or anywhere on the 3D view.</p>
+        <p>Drop a <b>.zip</b>, a <b>folder</b>, or a <b>.urdf</b> with its mesh files here or anywhere on the 3D view. It replaces the active arm; use <b>+ Spawn arm</b> first to keep it.</p>
         <div class="row">
           <button id="urdf-pick-files">Choose .zip or files</button>
           <button id="urdf-pick-folder">Choose folder</button>
@@ -389,11 +390,15 @@ run();
           <label><input type="checkbox" id="urdf-show-com" /> Centre of mass</label>
         </div>
 
+        <h4>Tool tip</h4>
+        <p class="hint">The point IK steers, and where grab() picks things up. Tools you mount go here too.</p>
+        <div class="row"><select id="urdf-tip" style="width:100%"></select></div>
+
         <h4>Joints</h4>
-        <p class="hint">Drag a slider, or grab a part of the robot in the 3D view and drag it.</p>
-        <div id="urdf-joints"></div>
+        <p class="hint">Numbers are what <code>setJoint(i, value)</code> uses. Move them in the Inspector tab, with IK or scripts, or grab a part in the 3D view and drag it.</p>
+        <ul id="urdf-roles" class="urdf-roles"></ul>
+        <p id="urdf-mimic" class="hint"></p>
         <div class="row">
-          <button id="urdf-home">Home pose</button>
           <button id="urdf-frame">Frame robot</button>
         </div>
 
@@ -406,7 +411,7 @@ run();
         </details>
 
         <div class="row" style="margin-top:12px;">
-          <button id="urdf-close" class="danger">Close robot</button>
+          <button id="urdf-close" class="danger">Remove this robot</button>
         </div>
       </div>
     </div>
@@ -485,6 +490,6 @@ run();
   })();
 </script>
 
-<script type="module" src="js/main.js?v=18"></script>
+<script type="module" src="js/main.js?v=19"></script>
 </body>
 </html>
