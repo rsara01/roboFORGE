@@ -29,6 +29,7 @@ import {
   downloadText, readFileAsText,
 } from './persistence.js';
 import { MeshLibrary } from './meshLibrary.js';
+import { UrdfPanel } from './urdf/panel.js';
 
 // Default "ready" joint angles for the RS arm (radians, J1..J6). The CAD ships
 // folded; this opens it to a natural presentation pose. Tuned in the viewer.
@@ -947,6 +948,7 @@ saveJSON() {
     downloadText('robot.urdf', robotToURDF(robot));
   },
   loadFromFile(kind, onSuccess, onError) {
+    if (kind === 'urdf') { urdfPanel.pickFiles(); return; }
     const inp = document.getElementById('file-input');
     inp.value = '';
     inp.accept = kind === 'urdf' ? '.urdf,.xml' : '.json';
@@ -1015,6 +1017,35 @@ _stepOnce(dt) {
 };
 
 scriptRunner.app = app;
+
+// Imported URDF robots are shown on their own: the built-in arms (and the IK
+// target that drives them) step aside until the URDF is closed.
+const urdfPanel = new UrdfPanel({
+  scene, camera, orbit, renderer,
+  dropTarget: document.getElementById('viewport-wrap'),
+  loading: {
+    show(msg) {
+      const el = document.getElementById('rf-loading');
+      if (el && !el.classList.contains('gone')) el.querySelector('.label').textContent = msg;
+      else { el?.remove(); Loading.show(msg); }
+    },
+    hide() { Loading.hide(); },
+  },
+  loadOwnURDF: async (text) => {
+    const makeEE = (t) => { const ee = createEndEffector(t); if (ee) robot.addEndEffector(ee); return ee; };
+    await app.loadURDFData(text, makeEE);
+    app.onSelect(null);
+    app.refreshUI();
+  },
+  onActive(on) {
+    for (const r of robots) r.rootGroup.visible = !on;
+    if (on) { transform.detach(); ikTracker.stop?.(); ikTarget.group.visible = false; }
+    else ikTarget.group.visible = document.getElementById('ik-show-target')?.checked ?? true;
+    document.body.classList.toggle('urdf-active', on);
+  },
+});
+
+app.urdf = urdfPanel;
 
 const ui = new UI({
   ...app,
@@ -1116,7 +1147,7 @@ try {
 }
 
 renderer.domElement.addEventListener('pointerdown', (e) => {
-  if (transform.dragging) return;
+  if (transform.dragging || urdfPanel.active) return;
 
   const candidates = [];
   for (const r of robots) candidates.push(...r.pickableObjects());

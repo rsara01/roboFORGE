@@ -691,3 +691,59 @@ body.mobile-blocked { overflow: hidden; }
 #save-project-dialog-buttons button {
   padding: 8px 16px;
 }
+
+/* ---------- URDF import tab ---------- */
+.urdf-drop {
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: var(--bg);
+  font-size: 12px;
+}
+.urdf-drop p { margin: 0 0 8px 0; }
+.urdf-drop.is-dropping, #viewport-wrap.is-dropping::after { border-color: #f08327; }
+#viewport-wrap { position: relative; }
+#viewport-wrap.is-dropping::after {
+  content: "Drop to load this robot";
+  position: absolute; inset: 10px; z-index: 30;
+  display: grid; place-items: center;
+  border: 2px dashed #f08327; border-radius: 10px;
+  background: rgba(15, 18, 22, 0.72);
+  color: var(--fg); font-size: 16px;
+  pointer-events: none;
+}
+.urdf-status { font-size: 12px; margin: 8px 0; color: var(--fg-dim); }
+.urdf-status.is-error { color: #ffb4b4; }
+.urdf-head { margin: 12px 0 6px; display: flex; flex-direction: column; gap: 2px; }
+.urdf-head strong { font-size: 14px; word-break: break-all; }
+.urdf-head .hint { margin: 0; }
+.urdf-problems {
+  font-size: 11px; line-height: 1.45;
+  background: var(--bg); border: 1px solid #5b4a2a; border-radius: 4px;
+  padding: 6px 8px; margin: 8px 0; max-height: 180px; overflow: auto;
+}
+.urdf-problems p { margin: 0 0 4px 0; }
+.urdf-problems ul { margin: 0; padding-left: 16px; }
+.urdf-problems .lvl-error { color: #ffb4b4; }
+.urdf-problems .lvl-warn { color: #ffd59a; }
+.urdf-problems .lvl-info { color: var(--fg-dim); }
+.urdf-toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; font-size: 12px; }
+#urdf-joints { display: flex; flex-direction: column; gap: 6px; }
+.urdf-joint { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 5px 8px; }
+.urdf-joint .head { display: flex; gap: 6px; align-items: baseline; font-size: 11px; color: var(--fg-dim); }
+.urdf-joint .name { color: var(--fg); font-family: ui-monospace, Menlo, Consolas, monospace; word-break: break-all; }
+.urdf-joint output { margin-left: auto; font-family: ui-monospace, Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; color: var(--fg); }
+.urdf-joint input[type="range"] { width: 100%; accent-color: #f08327; }
+.urdf-tree { list-style: none; margin: 0; padding: 0; font: 11px/1.6 ui-monospace, Menlo, Consolas, monospace; max-height: 220px; overflow: auto; }
+.urdf-tree li { padding-left: calc(var(--d) * 10px); white-space: nowrap; }
+.urdf-tree .link { color: var(--fg); }
+.urdf-tree .joint { color: var(--fg-dim); }
+.urdf-tree .joint span { opacity: 0.7; }
+.urdf-files { margin-top: 12px; font-size: 11px; }
+.urdf-files summary { cursor: pointer; color: var(--fg-dim); }
+.urdf-files ul { list-style: none; margin: 6px 0 0; padding: 0; max-height: 200px; overflow: auto; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.urdf-files li { display: flex; justify-content: space-between; gap: 8px; }
+.urdf-files li span:first-child { word-break: break-all; }
+.urdf-files li span:last-child { color: var(--fg-dim); white-space: nowrap; }
+body.urdf-active .overlay-info,
+body.urdf-active .overlay-gizmo-mode { display: none; }

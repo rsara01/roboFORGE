@@ -50,7 +50,7 @@
     <button id="btn-save">Save JSON</button>
     <button id="btn-load">Load JSON</button>
     <button id="btn-export-urdf">Export URDF</button>
-    <button id="btn-import-urdf">Import URDF</button>
+    <button id="btn-import-urdf" title="A .urdf, a .zip of a robot package, or a folder">Import URDF</button>
     <input type="file" id="file-input" accept=".json,.urdf,.xml" hidden />
     <span class="sep"></span>
     <label class="topbar-theme" title="Accent color">
@@ -231,6 +231,7 @@
       <button class="tab" data-tab="script">Script</button>
       <button class="tab" data-tab="plot">Plot</button>
       <button class="tab" data-tab="record">Record</button>
+      <button class="tab" data-tab="urdf">URDF</button>
     </div>
 
     <div class="tab-panel active" data-panel="inspector">
@@ -357,6 +358,58 @@ run();
       <p class="hint">Use the <b>Scale</b> slider in the timeline to slow playback. It is clamped to ≤ 1.0× — recordings can be slowed but never sped up.</p>
       <div id="arm-rec-status" class="hint">0 frames · 0.00s</div>
     </div>
+
+    <div class="tab-panel" data-panel="urdf">
+      <h3>Import a robot (URDF)</h3>
+      <div id="urdf-drop" class="urdf-drop">
+        <p>Drop a <b>.zip</b>, a <b>folder</b>, or a <b>.urdf</b> with its mesh files here or anywhere on the 3D view.</p>
+        <div class="row">
+          <button id="urdf-pick-files">Choose .zip or files</button>
+          <button id="urdf-pick-folder">Choose folder</button>
+        </div>
+        <input type="file" id="urdf-files" multiple hidden accept=".zip,.urdf,.xml,.xacro,.stl,.dae,.obj,.mtl,.glb,.gltf,.bin,.png,.jpg,.jpeg,.tga" />
+        <input type="file" id="urdf-folder" webkitdirectory multiple hidden />
+        <p class="hint">Meshes: STL, DAE, OBJ (+MTL), glTF/GLB. <code>package://</code> paths are found inside the zip. Nothing is uploaded; it all stays in your browser.</p>
+      </div>
+      <p id="urdf-status" class="urdf-status" hidden></p>
+
+      <div id="urdf-loaded" hidden>
+        <div class="urdf-head"><strong id="urdf-name"></strong><span id="urdf-stats" class="hint"></span></div>
+        <div class="row" id="urdf-file-row" hidden>
+          <label>URDF <select id="urdf-file-select"></select></label>
+        </div>
+        <div id="urdf-problems" class="urdf-problems" hidden></div>
+
+        <h4>Show</h4>
+        <div class="urdf-toggles">
+          <label><input type="checkbox" id="urdf-show-visual" checked /> Visual</label>
+          <label><input type="checkbox" id="urdf-show-collision" /> Collision</label>
+          <label><input type="checkbox" id="urdf-show-frames" /> Link frames</label>
+          <label><input type="checkbox" id="urdf-show-axes" /> Joint axes</label>
+          <label><input type="checkbox" id="urdf-show-com" /> Centre of mass</label>
+        </div>
+
+        <h4>Joints</h4>
+        <p class="hint">Drag a slider, or grab a part of the robot in the 3D view and drag it.</p>
+        <div id="urdf-joints"></div>
+        <div class="row">
+          <button id="urdf-home">Home pose</button>
+          <button id="urdf-frame">Frame robot</button>
+        </div>
+
+        <h4>Links and joints</h4>
+        <ul id="urdf-tree" class="urdf-tree"></ul>
+
+        <details class="urdf-files">
+          <summary>Files in the package (<span id="urdf-file-count"></span>)</summary>
+          <ul id="urdf-file-list"></ul>
+        </details>
+
+        <div class="row" style="margin-top:12px;">
+          <button id="urdf-close" class="danger">Close robot</button>
+        </div>
+      </div>
+    </div>
   </aside>
 
 </main>
@@ -432,6 +485,6 @@ run();
   })();
 </script>
 
-<script type="module" src="js/main.js?v=17"></script>
+<script type="module" src="js/main.js?v=18"></script>
 </body>
 </html>
