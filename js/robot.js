@@ -647,11 +647,62 @@ addJoint(opts = {}) {
 
     this.joints.push(j);
     this._applyJointTransform(j);
+    if (j === this.gripperJoint) this._mountOwnGripper(j);
     return j;
+  }
+
+  /**
+   * The RS arm's real jaws, presented as a mounted gripper (first in line), so
+   * gripper(), grab(), IK-to-the-grip-point and the Gripper slider all use them.
+   * Its grip point is the middle of the space between the two jaws.
+   */
+  _mountOwnGripper(j) {
+    const jaws = [...j.fingers.up, ...j.fingers.down];
+    this.rootGroup.updateWorldMatrix(true, true);
+    const box = new THREE.Box3();
+    for (const m of jaws) box.expandByObject(m, true);
+    const group = new THREE.Group();
+    group.name = 'ee-own-gripper';
+    const grasp = new THREE.Object3D();
+    const tip = new THREE.Object3D();
+    group.add(grasp, tip);
+    const robot = this;
+    const params = { open: this.gripperOpen ?? 0 };
+    const ee = {
+      type: 'gripper', own: true, label: 'Own gripper',
+      group, tip, grasp, params, pickables: [],
+      setParam(name, val) { if (name === 'open') robot.setGripperOpen(+val); },
+      setHold(body) { robot._holdHalf = body ? (body.halfExtents || 0.03) : 0; robot.setGripperOpen(robot.gripperOpen); },
+      update() {}, dispose() {},
+    };
+    this.addEndEffector(ee);
+    // Put the grip point at the jaws' centre and the "tip" at their far end,
+    // measured along the way the last link points.
+    j.tip.updateWorldMatrix(true, false);
+    group.updateWorldMatrix(true, false);
+    if (!box.isEmpty()) {
+      const c = box.getCenter(new THREE.Vector3());
+      grasp.position.copy(group.worldToLocal(c.clone()));
+      const reach = new THREE.Vector3().setFromMatrixPosition(j.tip.matrixWorld)
+        .sub(new THREE.Vector3().setFromMatrixPosition(j.articulator.matrixWorld)).normalize();
+      const corners = [];
+      for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) corners.push(new THREE.Vector3(x, y, z));
+      const far = Math.max(...corners.map(p => p.clone().sub(c).dot(reach)));
+      tip.position.copy(group.worldToLocal(c.clone().addScaledVector(reach, far)));
+    }
+    // Own gripper goes first so IK and grab() use it.
+    this.endEffectors.splice(this.endEffectors.indexOf(ee), 1);
+    this.endEffectors.unshift(ee);
+    this._restackEndEffectors();
   }
 
   removeLastJoint() {
     if (this.joints.length === 0) return;
+    if (this.joints[this.joints.length - 1] === this.gripperJoint) {
+      const own = this.endEffectors.find(e => e.own);
+      if (own) this.removeEndEffector(own);
+      this.gripperJoint = null;
+    }
     const j = this.joints.pop();
     const detached = [];
     for (const ee of this.endEffectors) {
@@ -738,9 +789,10 @@ setJointValue(index, value) {
   }
 
   getEndEffectorWorldPosition(target = new THREE.Vector3()) {
+    // With a tool mounted, that's its grip point: the middle of the gripper.
     const primary = this.endEffectors[0];
     const last = primary
-      ? primary.tip
+      ? (primary.grasp || primary.tip)
       : (this.joints.length ? this.joints[this.joints.length - 1].tip : this.baseTip);
     last.updateWorldMatrix(true, false);
     return target.setFromMatrixPosition(last.matrixWorld);
@@ -807,7 +859,10 @@ rebuildJointGeometry(j) {
     const closeInset = 0.006; // metres each jaw presses past rest to mate when closed
     const travel = 0.03;      // metres each jaw slides from closed to fully open (jaw tip
                                // stays inside the ±92mm rail housing at full travel)
-    const dz = -closeInset + this.gripperOpen * (travel + closeInset);
+    let dz = -closeInset + this.gripperOpen * (travel + closeInset);
+    if (this._holdHalf) dz = Math.max(dz, Math.min(travel, this._holdHalf));   // jaw faces stop on the object
+    const own = this.endEffectors.find(e => e.own);
+    if (own) own.params.open = this.gripperOpen;
     for (const m of j.fingers.up)   m.position.z = (m.userData.rest?.z ?? 0) + dz;
     for (const m of j.fingers.down) m.position.z = (m.userData.rest?.z ?? 0) - dz;
     return true;

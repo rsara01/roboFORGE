@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { buildLinearTrajectory } from './trajectory.js';
-import { solveIK } from './ik.js';
+import { solveIK, solveIKAvoidingCollisions } from './ik.js';
+import { pick, drop } from './grasp.js';
 
 const SCRIPT_CANCELLED = Symbol('SCRIPT_CANCELLED');
 
@@ -43,14 +44,9 @@ async run(source) {
     const findEE = (type) => robot.endEffectors.find(e => e.type === type) || null;
     const primary = () => robot.endEffectors[0] || null;
 
-    const grab = () => {
-      const ee = primary();
-      return physics && ee?.tip ? physics.tryGrab(ee.tip) : null;
-    };
-    const release = () => {
-      const ee = primary();
-      return physics && ee?.tip ? physics.release(ee.tip) : null;
-    };
+    // Same pick-up / let-go as closing and opening the gripper (see grasp.js).
+    const grab = () => pick(physics, primary());
+    const release = () => drop(physics, primary());
 
     const scan = ({ fov = Math.PI / 3, range = 2.0 } = {}) => {
       if (!physics) return [];
@@ -147,6 +143,35 @@ const ikTo = async (x, y, z, duration = 1.0) => {
         await sim.nextFrame(token);
       }
       ckc();
+      // Following the straight line can leave CCD folded against its joint
+      // limits short of the goal. If so, search other starting poses for one
+      // that reaches it, then move there joint by joint (no teleporting).
+      for (let k = 0; k < 4; k++) solveIK(robot, target, { maxIter: 10, tolerance: 0.002 });
+      const err = robot.getEndEffectorWorldPosition(new THREE.Vector3()).distanceTo(target);
+      if (err > 0.005) {
+        const here = robot._snapshotJointValues();
+        const alt = solveIKAvoidingCollisions(robot, target, { maxIter: 40, tolerance: 0.002, restarts: 12, alwaysSeed: true });
+        const better = alt.error < err - 0.002 ? (alt.alternates?.length ? alt.alternates : [robot._snapshotJointValues()]) : [];
+        // Only use a pose the arm can swing to in a straight joint-space line
+        // without hitting the floor or itself on the way.
+        const clearPath = (pose) => {
+          for (let s = 1; s <= 24; s++) {
+            robot._restoreJointValues(here.map((v, i) => v + (pose[i] - v) * s / 24));
+            if (robot._hasViolation()) return false;
+          }
+          return true;
+        };
+        const pose = better.find(clearPath);
+        robot._restoreJointValues(here);
+        if (pose) {
+          const far = Math.max(...pose.map((v, i) => Math.abs(v - here[i])));
+          await moveLinear(pose, THREE.MathUtils.clamp(far / 1.5, 0.4, 2.0));
+          for (let k = 0; k < 4; k++) solveIK(robot, target, { maxIter: 10, tolerance: 0.002 });
+        }
+        const left = robot.getEndEffectorWorldPosition(new THREE.Vector3()).distanceTo(target);
+        if (left > 0.01) log(`[ikTo] got within ${(left * 100).toFixed(1)} cm of (${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}): out of reach, or blocked by the floor or the arm itself`);
+        if (globalThis.__ikDebug) globalThis.__ikDebug.push({ err, alt: alt.error, left });
+      }
     };
 
 const gripper = (open01) => {

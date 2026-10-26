@@ -23,7 +23,7 @@ export function robotToJSON(robot) {
         axis: j.link.axis ?? '+y',
       },
     })),
-    endEffectors: robot.endEffectors.map(ee => ({
+    endEffectors: robot.endEffectors.filter(ee => !ee.own).map(ee => ({
       type: ee.type,
       params: { ...ee.params },
     })),
@@ -48,7 +48,7 @@ export function urdfArmToJSON(arm) {
     gripperOpen: arm.gripperOpen,
     colors: { ...arm.colors },
     joints: arm.joints.map(j => ({ urdf: j.urdfName, name: j.name, value: j.value, min: j.min, max: j.max })),
-    endEffectors: arm.endEffectors.filter(ee => !ee.urdfBuiltin).map(ee => ({ type: ee.type, params: { ...ee.params } })),
+    endEffectors: arm.endEffectors.filter(ee => !ee.own).map(ee => ({ type: ee.type, params: { ...ee.params } })),
   };
 }
 

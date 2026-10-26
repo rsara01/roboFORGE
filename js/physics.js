@@ -130,16 +130,20 @@ spawnBox(position = new THREE.Vector3(0.5, 0.05, 0.0), size = 0.06, color = 0xff
     return [a, b];
   }
 
-tryGrab(tipObject, radius = 0.04) {
+tryGrab(tipObject, radius = 0.04, { keepPose = false, quiet = false, alongTo = null } = {}) {
 
     tipObject.updateWorldMatrix(true, false);
     const tipPos = new THREE.Vector3().setFromMatrixPosition(tipObject.matrixWorld);
+    // With `alongTo`, anything near the segment from the grip point out to the
+    // fingertips counts (an object held toward the tips is still in the hand).
+    const seg = alongTo ? new THREE.Line3(tipPos, new THREE.Vector3().setFromMatrixPosition((alongTo.updateWorldMatrix(true, false), alongTo.matrixWorld))) : null;
+    const near = new THREE.Vector3();
     let best = null, bestPenetration = -Infinity;
     const tmp = new THREE.Vector3();
     for (const b of this.bodies) {
       if (b.attachedTo && b.attachedTo.isObject3D) continue;
       tmp.setFromMatrixPosition(b.mesh.matrixWorld);
-      const d = tmp.distanceTo(tipPos);
+      const d = seg ? tmp.distanceTo(seg.closestPointToPoint(tmp, true, near)) : tmp.distanceTo(tipPos);
       const reach = (b.halfExtents || 0.03) + radius;
       if (d <= reach) {
         const pen = reach - d;
@@ -147,19 +151,23 @@ tryGrab(tipObject, radius = 0.04) {
       }
     }
     if (best) {
-      const worldQuat = new THREE.Quaternion().setFromRotationMatrix(best.mesh.matrixWorld);
-      this.scene.remove(best.mesh);
-      tipObject.add(best.mesh);
-
-      best.mesh.position.set(0, 0, 0);
-      const tipQuat = new THREE.Quaternion().setFromRotationMatrix(tipObject.matrixWorld);
-      best.mesh.quaternion.copy(tipQuat.invert().multiply(worldQuat));
+      if (keepPose) {
+        // Held where it was when the fingers closed, instead of jumping to the tool.
+        tipObject.attach(best.mesh);
+      } else {
+        const worldQuat = new THREE.Quaternion().setFromRotationMatrix(best.mesh.matrixWorld);
+        this.scene.remove(best.mesh);
+        tipObject.add(best.mesh);
+        best.mesh.position.set(0, 0, 0);
+        const tipQuat = new THREE.Quaternion().setFromRotationMatrix(tipObject.matrixWorld);
+        best.mesh.quaternion.copy(tipQuat.invert().multiply(worldQuat));
+      }
       best.attachedTo = tipObject;
       best.vel.set(0, 0, 0);
 
       _flashGrabRing(this.scene, tipPos, 0x6effa1);
       Sound.grab();
-    } else {
+    } else if (!quiet) {
       _flashGrabRing(this.scene, tipPos, 0xff5566);
       Sound.err();
     }
@@ -170,13 +178,7 @@ release(tipObject = null) {
     let released = false;
     for (const b of this.bodies) {
       if (b.attachedTo && (!tipObject || b.attachedTo === tipObject)) {
-        b.mesh.updateWorldMatrix(true, false);
-        const wp = new THREE.Vector3().setFromMatrixPosition(b.mesh.matrixWorld);
-        const wq = new THREE.Quaternion().setFromRotationMatrix(b.mesh.matrixWorld);
-        b.attachedTo.remove(b.mesh);
-        this.scene.add(b.mesh);
-        b.mesh.position.copy(wp);
-        b.mesh.quaternion.copy(wq);
+        this.scene.attach(b.mesh);    // keeps its world position, rotation and scale
 
         b.attachedTo = null;
         b.vel.set(0, 0, 0);

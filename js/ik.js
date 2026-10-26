@@ -153,7 +153,7 @@ export function solveIKAvoidingCollisions(robot, target, options = {}) {
   const n = robot.joints.length;
   const startPose = robot._snapshotJointValues();
   if (n === 0) return { converged: false, error: Infinity, iterations: 0, alternates: [] };
-  if (!robot.selfCollision) {
+  if (!robot.selfCollision && !options.alwaysSeed) {
     // Nothing to avoid — just solve normally from wherever the arm is.
     const r = solveIK(robot, target, { maxIter, tolerance: tol });
     return { ...r, alternates: [] };

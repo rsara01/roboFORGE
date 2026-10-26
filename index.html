@@ -107,9 +107,9 @@
       <h2 id="code-title">Or just tell it what to do.</h2>
       <p>
         The Arm Lab has a Script tab that runs plain JavaScript, and these are real
-        commands from it. <code>ikTo(x, y, z)</code> moves the tip of the gripper to a
-        point (in metres), <code>grab()</code> picks up the block between the jaws, and
-        <code>release()</code> lets go.
+        commands from it. <code>ikTo(x, y, z)</code> moves the middle of the gripper to a
+        point (in meters). Closing the jaws with <code>gripper(0)</code> picks up whatever
+        is between them, and opening them lets go.
       </p>
     </div>
     <div class="editor">
@@ -118,14 +118,13 @@
 resetBlocks()                 // put the three blocks back
 physicsOn()                   // turn gravity on
 gripper(1)                    // open the jaws
-await ikTo(0.5, 0.22, 0)      // hover over the orange block
-await ikTo(0.5, 0.06, 0)      // go down to it
-gripper(0)                    // close the jaws
-grab()                        // and pick it up
+await ikTo(0.5, 0.2, 0)       // hover over the orange block
+await ikTo(0.5, 0.03, 0)      // jaws around it
+gripper(0)                    // close them: it's picked up
 await ikTo(0.5, 0.35, 0)
 await ikTo(0.15, 0.35, 0.45)  // swing it around
 await ikTo(0.15, 0.08, 0.45)
-release()                     // let go</textarea>
+gripper(1)                    // open: let go</textarea>
       <div class="editor-bar">
         <span>You can edit it first.</span>
         <button type="button" class="btn btn--go" id="code-run">Run this in the Arm Lab</button>

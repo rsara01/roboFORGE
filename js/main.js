@@ -31,6 +31,7 @@ import {
 import { MeshLibrary } from './meshLibrary.js';
 import { UrdfPanel } from './urdf/panel.js';
 import { UrdfArm } from './urdf/arm.js';
+import { autoGrip } from './grasp.js';
 
 // Default "ready" joint angles for the RS arm (radians, J1..J6). The CAD ships
 // folded; this opens it to a natural presentation pose. Tuned in the viewer.
@@ -701,7 +702,7 @@ loadPreset(name) {
     const idx = activeRobotIdx;
     const wasUrdf = !!robots[idx].isUrdf;
     const vals = wasUrdf ? [] : robots[idx].joints.map(j => j.value);
-    const eeSpecs = robots[idx].endEffectors.filter(ee => !ee.urdfBuiltin).map(ee => ({ type: ee.type, params: { ...ee.params } }));
+    const eeSpecs = robots[idx].endEffectors.filter(ee => !ee.own).map(ee => ({ type: ee.type, params: { ...ee.params } }));
     const r = this._swapMeshSet(idx, want);
     if (want === 'procedural') this.loadPresetInto(r, '6dof');
     else this.buildRSModel(r);
@@ -1325,6 +1326,7 @@ if (sim.playing) {
 if (!sim.playing) for (const ee of robot.endEffectors) ee.update?.(wallDt);
 
   conveyor.step(wallDt);
+  autoGrip(physics, robots);   // closing a gripper on something picks it up
 
   {
     const hum = Sound.motor('conveyor', 60);

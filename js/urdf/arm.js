@@ -92,7 +92,7 @@ export class UrdfArm {
 
   /** (Re)build the joint list around a tool-tip link. Keeps joint values. */
   _setTip(tipLink) {
-    const keepEEs = this.endEffectors.filter(ee => !ee.urdfBuiltin);
+    const keepEEs = this.endEffectors.filter(ee => !ee.own);
     for (const ee of this.endEffectors) ee.group.removeFromParent();
     this.endEffectors = [];
     for (const j of this.joints) j.axesHelper?.removeFromParent();
@@ -231,7 +231,11 @@ export class UrdfArm {
     const byName = new Map(this.joints.map(j => [j.urdfName, j]));
     for (const [name, L] of this.urdf.links) {
       let owner = null;
-      for (let n = name; this.model.parentOf.has(n) && !owner;) { const pj = this.model.parentOf.get(n); owner = byName.get(pj.name) || null; n = pj.parent; }
+      for (let n = name; this.model.parentOf.has(n) && !owner;) {
+        const pj = this.model.parentOf.get(n);
+        owner = byName.get(pj.name) || (pj.mimic && byName.get(pj.mimic.joint)) || null;
+        n = pj.parent;
+      }
       L.obj.userData.jointId = owner?.id ?? null;
       L.ownerJoint = owner;
     }
@@ -240,20 +244,96 @@ export class UrdfArm {
   _mountOwnGripper() {
     const group = new THREE.Group();
     group.name = 'ee-urdf-gripper';
-    const tip = new THREE.Object3D();
-    group.add(tip);
+    const tip = new THREE.Object3D();      // the file's tool frame (near the fingertips)
+    const grasp = new THREE.Object3D();    // the middle of the fingers: what IK steers
+    group.add(tip, grasp);
     const arm = this;
     const params = { open: this.gripperOpen };
     this.addEndEffector({
       type: 'gripper',
-      urdfBuiltin: true,
+      own: true,
       label: 'Own gripper',
-      group, tip, params,
+      group, tip, grasp, params,
       pickables: [],
       setParam(name, val) { if (name === 'open') { params.open = THREE.MathUtils.clamp(+val, 0, 1); arm.setGripperOpen(params.open, true); } },
+      setHold(body) { arm._setHold(body); },
       update() {},
       dispose() {},
     });
+    grasp.position.copy(this._gripCentre());
+  }
+
+  /** Links moved by the gripper joints (and anything mimicking them). */
+  _fingerLinks(j = null) {
+    const out = [];
+    for (const L of this.urdf.links.values()) if (L.ownerJoint && (j ? L.ownerJoint === j : L.ownerJoint.role === 'gripper')) out.push(L);
+    return out;
+  }
+
+  /**
+   * Middle of the fingers, in the mount frame: the centre of the finger links
+   * with the gripper closed. If only one jaw moves (the other is part of the
+   * hand), that centre sits on the moving jaw, so pull it halfway back toward
+   * the file's own tool frame, which sits between the jaws.
+   */
+  _gripCentre() {
+    const links = this._fingerLinks();
+    if (!links.length) return new THREE.Vector3();
+    const saved = this.gripJoints.map(j => j.value);
+    for (const j of this.gripJoints) { j.value = j.min; this._applyJointTransform(j); }
+    this.rootGroup.updateWorldMatrix(true, true);
+    const box = new THREE.Box3();
+    for (const L of links) L.visual.traverse(o => { if (o.isMesh) box.expandByObject(o, true); });
+    this.gripJoints.forEach((j, i) => { j.value = saved[i]; this._applyJointTransform(j); });
+    this.rootGroup.updateWorldMatrix(true, true);
+    if (box.isEmpty()) return new THREE.Vector3();
+    const c = this.mount.worldToLocal(box.getCenter(new THREE.Vector3()));
+    const moving = new Set(links.map(L => L.ownerJoint));
+    if (moving.size === 1 && links.length === 1) c.set(c.x / 2, c.y, c.z / 2);
+    return c;
+  }
+
+  /**
+   * Fingers stop on a held object: for each finger joint, walk it from open
+   * toward closed and remember the last value where none of its vertices are
+   * inside the object's box.
+   */
+  _setHold(body) {
+    this._holdLimit = new Map();
+    if (body) {
+      body.mesh.updateWorldMatrix(true, false);
+      const toBody = new THREE.Matrix4().copy(body.mesh.matrixWorld).invert();
+      const h = (body.halfExtents || 0.03) - 0.001;
+      for (const j of this.gripJoints) {
+        const pts = [];
+        for (const L of this._fingerLinks(j)) L.visual.traverse(o => {
+          if (!o.isMesh) return;
+          const pos = o.geometry.attributes.position;
+          const step = Math.max(1, Math.floor(pos.count / 1500));
+          for (let i = 0; i < pos.count; i += step) pts.push([o, new THREE.Vector3().fromBufferAttribute(pos, i)]);
+        });
+        const saved = j.value;
+        let limit = j.min;
+        const inside = () => {
+          this.rootGroup.updateWorldMatrix(true, true);
+          for (const [o, v] of pts) {
+            const p = v.clone().applyMatrix4(o.matrixWorld).applyMatrix4(toBody);
+            if (Math.abs(p.x) < h && Math.abs(p.y) < h && Math.abs(p.z) < h) return true;
+          }
+          return false;
+        };
+        const N = 40;
+        for (let k = 0; k <= N; k++) {
+          j.value = THREE.MathUtils.lerp(j.max, j.min, k / N);
+          this._applyJointTransform(j);
+          if (inside()) { limit = THREE.MathUtils.lerp(j.max, j.min, Math.max(0, k - 1) / N); break; }
+        }
+        j.value = saved;
+        this._applyJointTransform(j);
+        this._holdLimit.set(j, limit);
+      }
+    }
+    this.setGripperOpen(this.gripperOpen);
   }
 
   /** Choose a different tool-tip link (from the URDF tab). */
@@ -298,7 +378,8 @@ export class UrdfArm {
   }
 
   getEndEffectorWorldPosition(target = new THREE.Vector3()) {
-    const t = this.endEffectors[0]?.tip || this.toolTip;
+    const ee = this.endEffectors[0];
+    const t = ee ? (ee.grasp || ee.tip) : this.toolTip;
     t.updateWorldMatrix(true, false);
     return target.setFromMatrixPosition(t.matrixWorld);
   }
@@ -362,9 +443,11 @@ export class UrdfArm {
     this.gripperOpen = THREE.MathUtils.clamp(t ?? 0, 0, 1);
     for (const j of this.gripJoints) {
       j.value = THREE.MathUtils.lerp(j.min, j.max, this.gripperOpen);
+      const stop = this._holdLimit?.get(j);
+      if (stop != null) j.value = Math.max(j.value, stop);     // fingers rest on the held object
       this._applyJointTransform(j);
     }
-    if (!fromEE) { const own = this.endEffectors.find(e => e.urdfBuiltin); if (own) own.params.open = this.gripperOpen; }
+    if (!fromEE) { const own = this.endEffectors.find(e => e.own); if (own) own.params.open = this.gripperOpen; }
     return this.gripJoints.length > 0;
   }
 

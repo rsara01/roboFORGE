@@ -53,15 +53,22 @@ function makeGripper() {
   fRight.position.set(0.045, 0.11, 0);
   group.add(fLeft, fRight);
 
+  // tip = the fingertips (what the floor check watches); grasp = the middle
+  // of the space between the fingers, which is what IK steers and where a
+  // picked-up object is held.
   const tip = new THREE.Object3D();
-  tip.position.y = 0.18;
+  tip.position.y = 0.16;
   group.add(tip);
+  const grasp = new THREE.Object3D();
+  grasp.position.y = 0.11;
+  group.add(grasp);
 
   const params = { open: 1 };
+  let holdHalf = 0;   // half-width of the object being held: fingers stop on it
 
   function setOpen(v) {
     params.open = THREE.MathUtils.clamp(v, 0, 1);
-    const half = 0.02 + params.open * 0.07;
+    const half = Math.max(0.02 + params.open * 0.07, holdHalf ? holdHalf + 0.009 : 0);
     fLeft.position.x = -half;
     fRight.position.x = half;
   }
@@ -69,12 +76,13 @@ function makeGripper() {
 
   return {
     type: 'gripper',
-    group, tip,
+    group, tip, grasp,
     pickables: [palm, fLeft, fRight],
     params,
     setParam(name, val) {
       if (name === 'open') setOpen(+val);
     },
+    setHold(body) { holdHalf = body ? (body.halfExtents || 0.03) : 0; setOpen(params.open); },
     update() {  },
     dispose() {
       [palm, fLeft, fRight].forEach(m => { m.geometry.dispose(); m.material.dispose(); });
@@ -109,14 +117,18 @@ function makeGripper3() {
   }
 
   const tip = new THREE.Object3D();
-  tip.position.y = 0.18;
+  tip.position.y = 0.16;
   group.add(tip);
+  const grasp = new THREE.Object3D();
+  grasp.position.y = 0.11;
+  group.add(grasp);
 
   const params = { open: 1 };
+  let holdHalf = 0;
 
   function setOpen(v) {
     params.open = THREE.MathUtils.clamp(v, 0, 1);
-    const r = 0.025 + params.open * 0.055;
+    const r = Math.max(0.025 + params.open * 0.055, holdHalf ? holdHalf + 0.01 : 0);
     for (const f of fingers) {
       const a = f.userData.baseAngle;
       f.position.x = Math.cos(a) * r;
@@ -127,12 +139,13 @@ function makeGripper3() {
 
   return {
     type: 'gripper3',
-    group, tip,
+    group, tip, grasp,
     pickables: [palm, ...fingers],
     params,
     setParam(name, val) {
       if (name === 'open') setOpen(+val);
     },
+    setHold(body) { holdHalf = body ? (body.halfExtents || 0.03) : 0; setOpen(params.open); },
     update() {},
     dispose() {
       [palm, ...fingers].forEach(m => { m.geometry.dispose(); m.material.dispose(); });
@@ -159,6 +172,9 @@ function makeSuction() {
   const tip = new THREE.Object3D();
   tip.position.y = 0.13;
   group.add(tip);
+  const grasp = new THREE.Object3D();   // centre of the cup's face
+  grasp.position.y = 0.12;
+  group.add(grasp);
 
   const params = { suction: 0 };
 
@@ -170,7 +186,7 @@ function makeSuction() {
 
   return {
     type: 'suction',
-    group, tip,
+    group, tip, grasp,
     pickables: [stem, cup],
     params,
     setParam(name, val) {
@@ -394,13 +410,16 @@ function makeMagnet() {
   const tip = new THREE.Object3D();
   tip.position.y = 0.12;
   group.add(tip);
+  const grasp = new THREE.Object3D();   // centre of the pole faces
+  grasp.position.y = 0.11;
+  group.add(grasp);
 
   const params = { energized: 0 };
   let t = 0;
 
   return {
     type: 'magnet',
-    group, tip,
+    group, tip, grasp,
     pickables: [yoke, poleN, poleS],
     params,
     setParam(name, val) {
