@@ -1,44 +1,12 @@
 /**
- * RoboForge home page: navigation, ink-in reveals, first-visit note,
- * "Open project", and the Dose access-code gate.
- * Interactive toys (hero arm, IK explainer, code box) live in sibling modules.
+ * RoboForge home page: navigation, "Load my .json", the code-box handoff to the
+ * Arm Lab, and the Dose access-code gate. The 3D hero and the IK toy are loaded
+ * as separate modules so the page is usable before any 3D code arrives.
  */
 
 import { Sound } from '../sound.js';
 
-const root = document.documentElement;
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-// ---------------------------------------------------------------- reveals
-
-/** Give each hand-drawn path its true length so it can draw itself in. */
-function measureStrokes() {
-  for (const svg of document.querySelectorAll('svg.draw')) {
-    let max = 0;
-    for (const p of svg.querySelectorAll('path')) {
-      try { max = Math.max(max, p.getTotalLength()); } catch { /* not rendered */ }
-    }
-    if (max > 0) svg.style.setProperty('--len', Math.ceil(max + 2));
-  }
-}
-
-function initReveals() {
-  measureStrokes();
-  root.classList.add('reveal-ready');
-  const items = document.querySelectorAll('.ink, svg.draw');
-  if (reduceMotion.matches || !('IntersectionObserver' in window)) {
-    items.forEach(el => el.classList.add('is-inked'));
-    return;
-  }
-  const io = new IntersectionObserver((entries) => {
-    for (const e of entries) {
-      if (!e.isIntersecting) continue;
-      e.target.classList.add('is-inked');
-      io.unobserve(e.target);
-    }
-  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
-  items.forEach(el => io.observe(el));
-}
 
 // ---------------------------------------------------------------- loader / navigation
 
@@ -46,7 +14,7 @@ const loader = document.getElementById('loader');
 const loaderLabel = document.getElementById('loader-label');
 
 function navigate(url, label) {
-  loaderLabel.textContent = label || 'Opening the lab…';
+  loaderLabel.textContent = label || 'Opening…';
   loader.classList.add('show');
   // Let the loading card paint before the browser starts unloading.
   setTimeout(() => { window.location.href = url; }, 60);
@@ -131,7 +99,7 @@ function tryPw() {
 
     Sound.ok();
     pwModal.classList.remove('show');
-    navigate('dose.html', 'Unlocking the Dose robot…');
+    navigate('dose.html', 'Opening Dose…');
   } else {
     Sound.err();
     pwErr.classList.add('show');
@@ -159,7 +127,7 @@ pwModal.addEventListener('keydown', (e) => {
   else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
 });
 
-// ---------------------------------------------------------------- open project (.json)
+// ---------------------------------------------------------------- load my .json
 
 const fileInput = document.getElementById('json-input');
 fileInput.addEventListener('change', async (e) => {
@@ -179,6 +147,15 @@ fileInput.addEventListener('change', async (e) => {
   }
 });
 
+// ---------------------------------------------------------------- code box → Arm Lab
+
+document.getElementById('code-run').addEventListener('click', () => {
+  sessionStorage.setItem('pendingScript', document.getElementById('code-input').value);
+  sessionStorage.removeItem('pendingImportJSON');
+  Sound.ok();
+  navigate('arm.html?action=new&run=1', 'Opening the Arm Lab…');
+});
+
 // ---------------------------------------------------------------- action wiring
 
 document.addEventListener('click', (e) => {
@@ -193,7 +170,7 @@ document.addEventListener('click', (e) => {
   } else if (action === 'drone') {
     e.preventDefault();
     Sound.ok();
-    navigate('drone.html', 'Fueling the drone…');
+    navigate('drone.html', 'Opening the drone…');
   } else if (action === 'dose') {
     e.preventDefault();
     Sound.click();
@@ -205,17 +182,22 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// ---------------------------------------------------------------- first-visit note
+// ---------------------------------------------------------------- live pieces
 
-const WELCOME_KEY = 'roboforge.seenWelcome';
-const firstNote = document.getElementById('first-note');
-let seen = true;
-try { seen = !!localStorage.getItem(WELCOME_KEY); } catch { /* storage blocked */ }
-if (!seen) firstNote.hidden = false;
-document.getElementById('first-note-ok').addEventListener('click', () => {
-  Sound.ok();
-  try { localStorage.setItem(WELCOME_KEY, '1'); } catch { /* storage blocked */ }
-  firstNote.hidden = true;
+import('./ikToy.js').then(m => m.mountIKToy({
+  canvas: document.getElementById('ik-toy'),
+  speed: document.getElementById('ik-speed'),
+  step: document.getElementById('ik-step'),
+  status: document.getElementById('ik-status'),
+  reduceMotion,
+})).catch(err => console.error('[home] IK toy failed:', err));
+
+import('./hero.js').then(m => m.mountHero({
+  stage: document.getElementById('hero-stage'),
+  readout: document.getElementById('hero-readout'),
+  reduceMotion,
+})).catch(err => {
+  console.error('[home] hero failed:', err);
+  const l = document.querySelector('#hero-stage .loading');
+  if (l) l.textContent = 'The 3D arm needs WebGL, which this browser has turned off.';
 });
-
-initReveals();

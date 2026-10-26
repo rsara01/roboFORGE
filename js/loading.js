@@ -13,7 +13,7 @@ function injectStyles() {
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       gap: 18px;
-      background: linear-gradient(135deg, var(--accent, #667eea) 0%, var(--accent-2, #764ba2) 100%);
+      background: #141517;
       z-index: 99999;
       transition: opacity 0.35s ease, visibility 0.35s ease;
       color: white;
@@ -38,7 +38,7 @@ function injectStyles() {
     }
     #rf-loading .bar > i {
       display: block; height: 100%; width: 40%;
-      background: white;
+      background: #f08327;
       animation: rfSlide 1.1s ease-in-out infinite;
     }
     @keyframes rfPulse {

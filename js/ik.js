@@ -30,29 +30,43 @@ export function solveIK(robot, target, options = {}) {
 
   const eeWorld = new THREE.Vector3();
   const snap = robot._snapshotJointValues();
+  // If the arm already starts in a violating pose, let it move freely so it can
+  // get out; otherwise refuse any single joint move that causes a violation.
+  const guard = !robot._hasViolation();
 
   for (let iter = 0; iter < maxIter; iter++) {
     robot.getEndEffectorWorldPosition(eeWorld);
     const err = eeWorld.distanceTo(target);
     if (err < tol) return { converged: true, error: err, iterations: iter };
 
-    const iterSnap = robot._snapshotJointValues();
+    let moved = 0;
     for (let i = robot.joints.length - 1; i >= 0; i--) {
       const j = robot.joints[i];
       j.group.updateWorldMatrix(true, true);
+      const before = j.value;
 
       if (j.type === 'revolute') {
         _solveRevolute(j, robot, target);
       } else {
         _solvePrismatic(j, robot, target);
       }
+
+      // Undo only this joint if its move collides, and keep going with the rest.
+      // (Rejecting the whole pass used to freeze the arm whenever one wrist move
+      // brushed against the collision capsules, so the shoulder never moved.)
+      if (j.value !== before) {
+        if (guard && robot._hasViolation()) {
+          j.value = before;
+          robot._applyJointTransform(j);
+        } else {
+          moved++;
+        }
+      }
     }
 
-    if (robot._hasViolation()) {
-      robot._restoreJointValues(iterSnap);
+    if (!moved) {
       robot.getEndEffectorWorldPosition(eeWorld);
-      const err2 = eeWorld.distanceTo(target);
-      return { converged: false, error: err2, iterations: iter, blocked: true };
+      return { converged: false, error: eeWorld.distanceTo(target), iterations: iter, blocked: true };
     }
   }
 
@@ -72,7 +86,8 @@ function _solveRevolute(j, robot, target) {
 
   const eePos = robot.getEndEffectorWorldPosition(_tmpV2);
 
-  const localAxis = AXIS_VECTOR[j.axis];
+  // Use the joint's exact axis when it has one (CAD arms); cardinal otherwise.
+  const localAxis = j.axisVec || AXIS_VECTOR[j.axis];
   _axisWorld.copy(localAxis).transformDirection(j.group.matrixWorld);
 
 const toEE = _tmpV3.copy(eePos).sub(jointPos);
@@ -100,7 +115,7 @@ const eeProj = toEE.clone().projectOnPlane(_axisWorld);
 function _solvePrismatic(j, robot, target) {
 
   const eePos = robot.getEndEffectorWorldPosition(_tmpV1);
-  const localAxis = AXIS_VECTOR[j.axis];
+  const localAxis = j.axisVec || AXIS_VECTOR[j.axis];
 
   _axisWorld.copy(localAxis).transformDirection(j.group.matrixWorld);
   const error = _tmpV2.copy(target).sub(eePos);

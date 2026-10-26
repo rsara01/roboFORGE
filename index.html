@@ -12,28 +12,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RoboForge: a robot arm lab in your browser</title>
-<meta name="description" content="Build a robot arm, teach it to pick things up, and program it in JavaScript. A robotics simulator that runs entirely in your browser, by Rishik Saravanan and Murari Kanishk Balla.">
+<title>RoboForge: build a robot arm in your browser</title>
+<meta name="description" content="Build a robot arm, teach it to pick things up, and program it in JavaScript. A robotics simulator that runs in your browser, by Rishik Saravanan and Murari Kanishk Balla.">
 <meta name="author" content="Rishik Saravanan (lead developer), Murari Kanishk Balla (website and web design)">
-<meta name="theme-color" content="#f5f3f0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0d1b2a" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141517" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="assets/logo-mark.svg" type="image/svg+xml">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="site.css">
 <link rel="stylesheet" href="home.css">
+<link rel="modulepreload" href="https://unpkg.com/three@0.160.0/build/three.module.js">
 
-<script>
-  // Reveal-on-scroll is opt-in: content stays visible if the module never runs.
-  document.documentElement.classList.add('js-reveal');
-  setTimeout(function () {
-    if (!document.documentElement.classList.contains('reveal-ready')) {
-      document.documentElement.classList.remove('js-reveal');
-    }
-  }, 2500);
-</script>
 <script type="importmap">
 {
   "imports": {
@@ -49,439 +41,208 @@
 <a class="skip-link" href="#main">Skip to content</a>
 
 <header class="topbar">
-  <a class="brand" href="./" aria-label="RoboForge home">
-    <img src="assets/logo-mark.svg" alt="" width="38" height="30">
-    <span><b>RoboForge</b><br><small>robotics in a browser tab</small></span>
+  <a class="brand" href="./">
+    <img src="assets/logo-mark.svg" alt="" width="33" height="26">
+    RoboForge
   </a>
   <nav aria-label="Main">
     <a href="arm.html?action=new" data-action="arm">Arm Lab</a>
     <a href="drone.html" data-action="drone">Drone</a>
-    <button type="button" data-action="load">Open project</button>
+    <button type="button" data-action="load">Load a .json</button>
     <a href="about.html">About</a>
   </nav>
 </header>
 
 <main id="main">
 
-  <!-- ============ 1. HERO ============ -->
-  <section class="hero" aria-labelledby="hero-title">
-    <div class="wrap grid12">
-      <div class="hero-copy">
-        <p class="kicker ink">RoboForge · a robotics lab</p>
-        <h1 id="hero-title" class="ink" data-delay="1">
-          Build a robot arm. Teach it to pick things up.
-          <span class="ink-orange">In your browser.<svg class="draw" viewBox="0 0 300 20" preserveAspectRatio="none" aria-hidden="true"><path d="M3 13 C 70 4, 160 18, 297 7"/></svg></span>
-        </h1>
-        <p class="lede ink" data-delay="2">
-          No installs, no ROS, no toolchain. Drag the joints, write a few lines of
-          JavaScript, and watch a real kinematics solver do the hard part.
-        </p>
-        <div class="hero-cta ink" data-delay="3">
-          <a class="btn" href="arm.html?action=new" data-action="arm">Open the Arm Lab <span class="arr" aria-hidden="true">→</span></a>
-          <a class="btn btn--ghost" href="drone.html" data-action="drone">Fly a Drone</a>
-        </div>
-        <p class="hero-alt ink" data-delay="3">
-          Already built something? <button type="button" data-action="load">Open a saved project</button> (.json)
-        </p>
+  <section class="wrap hero" aria-labelledby="hero-title">
+    <div>
+      <h1 id="hero-title">Build a robot arm and teach it to pick things up.</h1>
+      <p class="lede">
+        This one's running the same inverse kinematics code as the full simulator.
+        Move your mouse over it and it reaches for your cursor. On a phone, tap where
+        you want it to go.
+      </p>
+      <div class="hero-actions">
+        <a class="btn" href="arm.html?action=new" data-action="arm">Open the Arm Lab</a>
+        <a class="btn btn--plain" href="drone.html" data-action="drone">Fly the drone</a>
+        <button type="button" class="textlink" data-action="load" style="background:none;border:0;padding:0;cursor:pointer">Load my .json</button>
       </div>
-
-      <figure class="hero-stage sheet taped ink" data-delay="2" aria-label="Interactive robot arm. It reaches toward your cursor; click the floor to drop a block.">
-        <div class="stage-slot" id="hero-slot">
-          <!-- Hand-drawn stand-in until the 3D arm has loaded. -->
-          <svg class="stage-sketch draw" viewBox="0 0 520 400" role="img" aria-label="Sketch of a robot arm reaching for a block">
-            <path class="s2" d="M20 342 L500 342"/>
-            <path class="s2" d="M44 342 l-12 13 M84 342 l-12 13 M124 342 l-12 13 M164 342 l-12 13 M204 342 l-12 13 M244 342 l-12 13 M284 342 l-12 13 M324 342 l-12 13 M364 342 l-12 13 M404 342 l-12 13 M444 342 l-12 13 M484 342 l-12 13"/>
-            <path class="s" d="M196 342 L205 303 L275 303 L284 342"/>
-            <path class="s" d="M215 303 C 215 284, 265 284, 265 303"/>
-            <path class="s" d="M240 289 L226 190 M232 290 L218 192 M248 288 L234 190"/>
-            <path class="s" d="M226 190 L352 138 M222 180 L348 129 M230 200 L356 148"/>
-            <path class="s" d="M352 138 L402 196"/>
-            <path class="s" d="M388 204 L416 204 M393 204 L385 228 M411 204 L419 228"/>
-            <circle class="s" cx="240" cy="289" r="12"/>
-            <circle class="s" cx="226" cy="190" r="13"/>
-            <circle class="s" cx="352" cy="138" r="11"/>
-            <path class="s2" d="M188 196 A 40 40 0 0 1 238 152" stroke-dasharray="4 6"/>
-            <rect class="blk" x="390" y="312" width="30" height="30" rx="2" transform="rotate(-4 405 327)"/>
-            <path class="dim" d="M240 360 L240 382 M402 360 L402 382 M240 371 L402 371 M240 371 l9 -4 M240 371 l9 4 M402 371 l-9 -4 M402 371 l-9 4"/>
-            <text x="300" y="394">reach</text>
-          </svg>
-        </div>
-        <div class="readout stage-readout" id="hero-readout" aria-hidden="true">j1  —
-j2  —
-j3  —
-j4  —
-j5  —
-j6  —</div>
-        <span class="stage-hint" aria-hidden="true">click the floor → drop a block</span>
-        <span class="annot hand hero-annot" aria-hidden="true">
-          move your mouse here
-          <svg class="draw" viewBox="0 0 56 40"><path d="M4 6 C 18 10, 34 18, 46 34 M46 34 l-10 -1 M46 34 l0 -10"/></svg>
-        </span>
-      </figure>
     </div>
 
-    <!-- First-visit hello (replaces the old full-screen welcome) -->
-    <div class="wrap">
-      <aside class="note first-note" id="first-note" hidden aria-label="Welcome note">
-        Hi! Everything on this page is live. Poke at it.
-        <button type="button" class="chip" id="first-note-ok">got it</button>
-      </aside>
+    <div class="stage" id="hero-stage" role="img" aria-label="A 3D robot arm that reaches toward your cursor. Live joint angles are shown in the corner.">
+      <div class="loading" aria-hidden="true">loading the arm…</div>
+      <div class="readout" id="hero-readout" aria-hidden="true"></div>
     </div>
   </section>
 
-  <!-- ============ 2. IK EXPLAINER ============ -->
-  <section class="section" id="solver" aria-labelledby="solver-title">
-    <div class="wrap grid12">
-      <div class="sec-head">
-        <p class="kicker ink">§ 02 · the solver</p>
-        <h2 id="solver-title" class="ink" data-delay="1">It's real math, not an animation.</h2>
-        <p class="ink" data-delay="2">
-          Nothing here is a recording. To reach a point, the arm runs a solver
-          called <strong>CCD</strong>: starting at the wrist and working back to
-          the shoulder, it turns each joint so the tip points a little closer
-          to the target, then repeats until it's close enough.
-        </p>
-        <p class="ink" data-delay="2">Drag the orange dot. Slow it down to watch it think, one joint at a time.</p>
-        <div class="note ink" data-delay="3">Every arm in RoboForge reaches this way, including yours.</div>
-      </div>
-
-      <figure class="toy-sheet sheet taped ink" data-delay="1" style="margin:0">
-        <div class="toy-canvas" id="ik-toy" role="application" aria-label="Two-dimensional three-joint arm. Drag or use arrow keys to move the target." tabindex="0">
-          <svg viewBox="0 0 640 400" aria-hidden="true">
-            <path d="M40 330 L600 330" fill="none" stroke="currentColor" stroke-opacity=".35" stroke-width="1.5"/>
-            <g fill="none" stroke="currentColor" stroke-opacity=".3" stroke-width="2" stroke-dasharray="5 6" stroke-linecap="round">
-              <path d="M170 330 L190 210 L320 150 L420 210"/>
-              <path d="M170 330 L220 215 L350 175 L445 222"/>
-            </g>
-            <g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round">
-              <path d="M170 330 L240 222 L372 196 L462 248"/>
-            </g>
-            <g fill="var(--card)" stroke="currentColor" stroke-width="3">
-              <circle cx="170" cy="330" r="10"/><circle cx="240" cy="222" r="9"/><circle cx="372" cy="196" r="9"/>
-            </g>
-            <circle cx="476" cy="262" r="12" fill="var(--orange)" stroke="currentColor" stroke-width="2.5"/>
-            <path d="M462 248 L476 262" stroke="var(--orange)" stroke-width="2" stroke-dasharray="3 4"/>
-          </svg>
-        </div>
-        <div class="toy-controls">
-          <label>speed <input type="range" id="ik-speed" min="0" max="1" step="0.01" value="0.6" aria-label="Solver speed"></label>
-          <button type="button" class="chip" id="ik-step">step one joint</button>
-          <span class="spacer"></span>
-          <span id="ik-status" aria-live="polite">iteration 0 · 0.000 m away</span>
-        </div>
-      </figure>
+  <section class="wrap reach" id="reach" aria-labelledby="reach-title">
+    <div class="text">
+      <h2 id="reach-title">How does it know where to reach?</h2>
+      <p>
+        It doesn't, at first. It guesses. It takes the joint closest to the tip and
+        turns it until the tip points at the target. Then it moves one joint back and
+        does the same thing, all the way to the shoulder, and starts over. After a few
+        passes the tip lands within a few millimetres.
+      </p>
+      <p>
+        That's called cyclic coordinate descent, or CCD, and in RoboForge it's under
+        100 lines of JavaScript. Drag the orange dot. The faint lines are the arm's
+        earlier guesses, so you can watch it get closer.
+      </p>
     </div>
+    <figure class="toy" style="margin:0">
+      <canvas id="ik-toy" width="960" height="600" tabindex="0"
+        aria-label="Two-dimensional robot arm with three joints. Drag the orange target, or focus here and use the arrow keys."></canvas>
+      <div class="toy-bar">
+        <label for="ik-speed">Speed <input type="range" id="ik-speed" min="0" max="1" step="0.01" value="0.55"></label>
+        <button type="button" class="btn btn--plain btn--small" id="ik-step">Step one joint</button>
+        <span class="readout" id="ik-status" aria-live="polite"></span>
+      </div>
+    </figure>
   </section>
 
-  <!-- ============ 3. CODE ============ -->
-  <section class="section" id="code" aria-labelledby="code-title">
-    <div class="wrap grid12">
-      <div class="sec-head">
-        <p class="kicker ink">§ 03 · scripting</p>
-        <h2 id="code-title" class="ink" data-delay="1">Talk to it in code.</h2>
-        <p class="ink" data-delay="2">
-          The Arm Lab has a script tab that runs plain JavaScript. This box uses
-          the exact same commands: <code>moveTo</code> turns one joint,
-          <code>ikTo</code> reaches for a point in space, <code>gripper</code>
-          and <code>grab</code> do what you'd hope.
-        </p>
-        <p class="annot hand hand--blue ink" data-delay="3" aria-hidden="true">
-          <svg class="draw" viewBox="0 0 56 40"><path d="M50 8 C 34 8, 16 16, 8 32 M8 32 l1 -10 M8 32 l9 -4"/></svg>
-          edit it. break it. press run.
-        </p>
-      </div>
-
-      <figure class="code-sheet sheet ink" data-delay="1" style="margin:0">
-        <div class="code-bar">
-          <span class="fname">pick_and_place.js</span>
-          <button type="button" class="chip" data-example="wave">wave</button>
-          <button type="button" class="chip" data-example="stack">stack two blocks</button>
-          <button type="button" class="chip" data-example="circle">draw a circle</button>
-          <button type="button" class="btn" id="code-run" style="padding:9px 14px;font-size:14px">Run ▸</button>
-        </div>
-        <div class="code-body">
-          <label for="code-input" class="sr-only">Robot script</label>
-          <textarea id="code-input" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off">// Reach, grab, put it somewhere else.
-await moveTo(1, 0.8)          // tilt the shoulder
-await ikTo(0.35, 0.05, 0.2)   // hover over the block
+  <section class="wrap code" id="code" aria-labelledby="code-title">
+    <div class="text">
+      <h2 id="code-title">Or just tell it what to do.</h2>
+      <p>
+        The Arm Lab has a Script tab that runs plain JavaScript, and these are real
+        commands from it. <code>ikTo(x, y, z)</code> moves the tip of the gripper to a
+        point (in metres), <code>grab()</code> picks up the block between the jaws, and
+        <code>release()</code> lets go.
+      </p>
+    </div>
+    <div class="editor">
+      <label for="code-input" class="sr-only">Robot script</label>
+      <textarea id="code-input" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off">// Pick up the orange block and put it somewhere else.
+resetBlocks()                 // put the three blocks back
+physicsOn()                   // turn gravity on
+gripper(1)                    // open the jaws
+await ikTo(0.5, 0.22, 0)      // hover over the orange block
+await ikTo(0.5, 0.06, 0)      // go down to it
 gripper(0)                    // close the jaws
-grab()                        // pick it up
-await ikTo(0.1, 0.3, -0.3)    // carry it
-release()</textarea>
-          <div class="code-view" id="code-slot" aria-label="Preview of the arm running your script">
-            <span class="stage-hint" aria-hidden="true">the arm runs here</span>
-          </div>
-        </div>
-        <pre class="code-log" id="code-log" aria-live="polite">// output shows up here</pre>
+grab()                        // and pick it up
+await ikTo(0.5, 0.35, 0)
+await ikTo(0.15, 0.35, 0.45)  // swing it around
+await ikTo(0.15, 0.08, 0.45)
+release()                     // let go</textarea>
+      <div class="editor-bar">
+        <span>You can edit it first.</span>
+        <button type="button" class="btn btn--go" id="code-run">Run this in the Arm Lab</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap lab" aria-label="Screenshots of the Arm Lab">
+    <p class="lede">Everything else is in the Arm Lab. These are screenshots of it, not mockups.</p>
+    <div class="shots">
+      <figure>
+        <img src="assets/shots/arm-rs.jpg" width="1600" height="1000" loading="lazy"
+          alt="The Arm Lab showing the reBot B601 arm in green and black, with the joint sliders on the right.">
+        <figcaption>
+          The reBot B601. I converted its STEP file into seven meshes (452,685 triangles,
+          7.8 MB) so the arm on screen has the same shape as the real one.
+        </figcaption>
+      </figure>
+      <figure>
+        <img src="assets/shots/arm-script.jpg" width="1600" height="1000" loading="lazy"
+          alt="The Script tab running a pick-and-place script while the arm holds a block.">
+        <figcaption>The Script tab, partway through the script above.</figcaption>
+      </figure>
+      <figure>
+        <img src="assets/shots/arm-record.jpg" width="1600" height="1000" loading="lazy"
+          alt="The Record tab, with buttons to record motion and export it as JSON or an Arduino sketch.">
+        <figcaption>Record a motion, then export it as an Arduino sketch that plays it back on real stepper motors.</figcaption>
       </figure>
     </div>
   </section>
 
-  <!-- ============ 4. BRING YOUR OWN ROBOT ============ -->
-  <section class="section" id="byor" aria-labelledby="byor-title">
-    <div class="wrap">
-      <div class="grid12" style="margin-bottom:34px">
-        <div class="sec-head" style="grid-column:1 / 8">
-          <p class="kicker ink">§ 04 · import</p>
-          <h2 id="byor-title" class="ink" data-delay="1">Bring your own robot.</h2>
-          <p class="ink" data-delay="2">
-            Robots are usually described in a format called <strong>URDF</strong>: a list of
-            links, joints and 3D meshes. Hand RoboForge one and it becomes a working arm
-            you can drive, solve IK on, script, and use to pick things up.
-          </p>
-        </div>
-      </div>
-      <div class="grid12">
-        <div class="byor-drop ink">
-          <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-describedby="drop-help">
-            <div>
-              <svg class="glyph" viewBox="0 0 64 64" aria-hidden="true">
-                <path d="M14 40 L14 52 L50 52 L50 40"/>
-                <path d="M32 10 L32 40 M21 29 L32 40 L43 29"/>
-              </svg>
-              <h3>Drop any robot arm's URDF here.</h3>
-              <p id="drop-help">A .urdf with its meshes folder, a whole folder, or a .zip of the robot package.</p>
-              <p class="types">.urdf · .zip · STL · DAE · OBJ · GLB</p>
-            </div>
-          </div>
-          <input type="file" id="byor-files" multiple hidden>
-          <input type="file" id="byor-folder" webkitdirectory multiple hidden>
-        </div>
-
-        <div class="byor-side">
-          <p class="hand ink" style="margin:0 0 2px">no URDF handy? try one of these →</p>
-          <button type="button" class="sample sheet ink" data-sample="so101" data-delay="1">
-            <span class="thumb" aria-hidden="true"><svg viewBox="0 0 44 44"><path d="M10 38 L34 38 M22 38 L22 26 L30 14 L38 18"/><circle cx="22" cy="26" r="2.5"/><circle cx="30" cy="14" r="2.5"/></svg></span>
-            <span><b>SO-101</b><small>small 3D-printable arm · 6 joints</small></span>
-            <span class="go" aria-hidden="true">→</span>
-          </button>
-          <button type="button" class="sample sheet ink" data-sample="panda" data-delay="2">
-            <span class="thumb" aria-hidden="true"><svg viewBox="0 0 44 44"><path d="M10 38 L34 38 M20 38 L20 22 L28 10 L36 16 L34 26"/><circle cx="20" cy="22" r="2.5"/><circle cx="28" cy="10" r="2.5"/><circle cx="36" cy="16" r="2.5"/></svg></span>
-            <span><b>Franka Panda</b><small>research arm · 7 joints + fingers</small></span>
-            <span class="go" aria-hidden="true">→</span>
-          </button>
-          <button type="button" class="sample sheet ink" data-sample="ur5e" data-delay="3">
-            <span class="thumb" aria-hidden="true"><svg viewBox="0 0 44 44"><path d="M10 38 L34 38 M16 38 L16 30 L16 20 L32 20 L32 30"/><circle cx="16" cy="20" r="3"/><circle cx="32" cy="20" r="3"/></svg></span>
-            <span><b>UR5e</b><small>industrial cobot · 6 joints</small></span>
-            <span class="go" aria-hidden="true">→</span>
-          </button>
-          <p class="byor-credit">Sample arms are open-source robot descriptions; each one's license and credit is listed with it.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ 5. PLAYGROUND ============ -->
-  <section class="section" id="play" aria-labelledby="play-title">
-    <div class="wrap">
-      <div class="grid12" style="margin-bottom:34px">
-        <div class="sec-head" style="grid-column:5 / 13">
-          <p class="kicker ink">§ 05 · the rest of the toolbox</p>
-          <h2 id="play-title" class="ink" data-delay="1">Things to poke at.</h2>
-          <p class="ink" data-delay="2">Each of these is a piece of the Arm Lab, shrunk down so you can play with it here.</p>
-        </div>
-      </div>
-
-      <div class="play">
-        <figure class="tile sheet t-ee ink" style="margin:0">
-          <div class="toy" data-toy="ee" tabindex="0" role="button" aria-label="Cycle end effectors">
-            <svg viewBox="0 0 200 120" aria-hidden="true">
-              <path class="s" d="M100 8 L100 40 M76 40 L124 40 M82 40 L74 86 M118 40 L126 86"/>
-              <path class="b" d="M62 96 C 80 104, 120 104, 138 96" stroke-dasharray="3 5"/>
-            </svg>
-          </div>
-          <figcaption><b>End effectors</b> click to swap: gripper, suction, welder, camera.</figcaption>
-        </figure>
-
-        <figure class="tile sheet t-cad taped ink" data-delay="1" style="margin:0">
-          <div class="toy" data-toy="cad">
-            <svg viewBox="0 0 320 140" aria-hidden="true">
-              <path class="s" d="M40 120 L90 120 L84 104 L46 104 Z"/>
-              <path class="s" d="M104 98 L130 60 L146 70 L120 108 Z"/>
-              <path class="s" d="M162 54 L232 34 L238 50 L168 70 Z"/>
-              <path class="s" d="M250 40 L276 58 L268 70 L242 52 Z"/>
-              <path class="b" d="M90 108 L104 104 M146 68 L162 62 M238 44 L250 44" stroke-dasharray="3 4"/>
-            </svg>
-            <span class="annot hand" style="position:absolute;right:10px;bottom:6px" aria-hidden="true">← the real CAD file</span>
-          </div>
-          <figcaption><b>A real arm</b> the reBot B601 CAD model. Slide to explode it.</figcaption>
-        </figure>
-
-        <figure class="tile sheet t-traj ink" style="margin:0">
-          <div class="toy" data-toy="traj">
-            <svg viewBox="0 0 320 140" aria-hidden="true">
-              <path class="b" d="M20 120 L300 20"/>
-              <path class="s" d="M20 120 C 120 120, 200 20, 300 20"/>
-              <path class="s" d="M20 120 C 160 120, 160 20, 300 20" stroke-dasharray="6 5"/>
-              <circle class="o" cx="20" cy="120" r="7"/><circle class="o" cx="300" cy="20" r="7"/>
-            </svg>
-          </div>
-          <figcaption><b>Trajectories</b> drag the ends. Linear, cubic and quintic take different routes.</figcaption>
-        </figure>
-
-        <figure class="tile sheet t-plot ink" data-delay="1" style="margin:0">
-          <div class="toy" data-toy="plot">
-            <svg viewBox="0 0 200 120" aria-hidden="true">
-              <path class="b" d="M6 60 L194 60" stroke-dasharray="2 5"/>
-              <path class="s" d="M6 70 C 30 30, 50 30, 70 60 S 110 100, 130 56 S 170 30, 194 48"/>
-            </svg>
-          </div>
-          <figcaption><b>Joint plot</b> live angles from the arm at the top.</figcaption>
-        </figure>
-
-        <figure class="tile sheet t-phys ink" style="margin:0">
-          <div class="toy" data-toy="phys">
-            <svg viewBox="0 0 200 120" aria-hidden="true">
-              <path class="s" d="M10 110 L190 110"/>
-              <rect class="s" x="70" y="80" width="30" height="30"/><rect class="s" x="100" y="80" width="30" height="30"/>
-              <rect class="s" x="84" y="50" width="30" height="30" transform="rotate(4 99 65)"/>
-              <rect class="o" x="92" y="22" width="26" height="26" transform="rotate(-6 105 35)"/>
-            </svg>
-          </div>
-          <figcaption><b>Physics</b> knock the tower over.</figcaption>
-        </figure>
-
-        <figure class="tile sheet t-record taped ink" data-delay="1" style="margin:0">
-          <div class="toy" data-toy="record">
-            <svg viewBox="0 0 420 120" aria-hidden="true">
-              <path class="s" d="M20 84 L400 84"/>
-              <path class="b" d="M20 64 C 80 20, 140 100, 200 50 S 320 30, 400 70"/>
-              <circle class="o" cx="20" cy="84" r="6"/><circle class="o" cx="130" cy="84" r="6"/><circle class="o" cx="260" cy="84" r="6"/>
-              <path class="s" d="M196 30 L196 104"/>
-            </svg>
-          </div>
-          <figcaption><b>Record &amp; replay</b> wiggle the arm, then press play.</figcaption>
-        </figure>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ 6. OTHER ROBOTS ============ -->
-  <section class="section" id="labs" aria-labelledby="labs-title">
-    <div class="wrap">
-      <div class="grid12" style="margin-bottom:34px">
-        <div class="sec-head">
-          <p class="kicker ink">§ 06 · other labs</p>
-          <h2 id="labs-title" class="ink" data-delay="1">It's not just arms.</h2>
-        </div>
-      </div>
-      <div class="labs">
-        <a class="cart sheet cart-drone ink" href="drone.html" data-action="drone">
-          <svg class="pic" viewBox="0 0 320 120" aria-hidden="true">
-            <path class="s" d="M110 64 L210 64 M130 64 L118 46 M190 64 L202 46"/>
-            <rect class="s" x="140" y="56" width="40" height="20" rx="4"/>
-            <path class="s" d="M90 44 L146 44 M174 44 L230 44"/>
-            <path class="s" d="M60 100 C 120 86, 200 112, 260 96" stroke-dasharray="5 7"/>
-            <circle class="o" cx="262" cy="96" r="5"/>
-          </svg>
-          <div>
-            <span class="label">UAV</span>
-            <h3 style="margin-top:10px">Drone Simulator</h3>
-            <p>Fly a quadrotor over real 3D terrain, tune its PID loops, and export the mission for a real drone through DroneKit.</p>
-          </div>
-          <div class="meta"><span>available</span><span class="go">fly it →</span></div>
-        </a>
-
-        <button type="button" class="cart sheet cart-dose ink" data-action="dose" data-delay="1">
-          <svg class="pic" viewBox="0 0 320 120" aria-hidden="true">
-            <rect class="s" x="110" y="64" width="90" height="36" rx="4"/>
-            <circle class="s" cx="128" cy="106" r="8"/><circle class="s" cx="184" cy="106" r="8"/>
-            <path class="s" d="M128 64 L128 18 M128 34 L170 26 L196 40 M196 40 L202 52 M196 40 L188 52"/>
-            <rect class="o" x="118" y="10" width="20" height="12" rx="2"/>
-          </svg>
-          <div>
-            <span class="label">locked</span>
-            <h3 style="margin-top:10px">Dose Robot</h3>
-            <p>A mobile hospital robot carrying the reBot arm. It needs an access code. Guess it, and it's yours.</p>
-          </div>
-          <div class="meta">
-            <span class="lock"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="8" rx="1"/><path d="M5 7 V5 a3 3 0 0 1 6 0 V7"/></svg> password</span>
-            <span class="go">unlock →</span>
-          </div>
-        </button>
-
-        <div class="soon-row" role="list" aria-label="Robots in development">
-          <div class="soon ink" role="listitem">
-            <span class="note" aria-hidden="true">soon</span>
-            <svg viewBox="0 0 100 86" aria-hidden="true"><circle class="s" cx="50" cy="12" r="8"/><path class="s" d="M50 20 L50 52 M34 28 L66 28 M34 28 L28 46 M66 28 L72 46 M50 52 L40 80 M50 52 L60 80"/></svg>
-            <div class="name">Humanoid</div>
-          </div>
-          <div class="soon ink" role="listitem" data-delay="1">
-            <span class="note" aria-hidden="true">soon</span>
-            <svg viewBox="0 0 100 86" aria-hidden="true"><rect class="s" x="22" y="30" width="56" height="18" rx="4"/><path class="s" d="M28 48 L22 64 L28 80 M42 48 L38 64 L44 80 M58 48 L54 64 L60 80 M72 48 L68 64 L74 80 M78 34 L88 24"/></svg>
-            <div class="name">Quadruped</div>
-          </div>
-          <div class="soon ink" role="listitem" data-delay="2">
-            <span class="note" aria-hidden="true">soon</span>
-            <svg viewBox="0 0 100 86" aria-hidden="true"><rect class="s" x="16" y="38" width="68" height="26" rx="5"/><circle class="s" cx="30" cy="70" r="8"/><circle class="s" cx="70" cy="70" r="8"/><path class="s" d="M34 38 L34 26 L66 26 L66 38"/></svg>
-            <div class="name">Mobile base</div>
-          </div>
-          <div class="soon ink" role="listitem" data-delay="3">
-            <span class="note" aria-hidden="true">soon</span>
-            <svg viewBox="0 0 100 86" aria-hidden="true"><path class="s" d="M14 46 C 14 30, 74 30, 80 46 C 74 62, 14 62, 14 46 Z M80 46 L92 36 L92 56 Z M40 34 L44 22 L56 22"/><path class="s" d="M8 74 C 24 68, 40 80, 56 74 S 84 68, 96 74" stroke-dasharray="3 5"/></svg>
-            <div class="name">Submersible</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ 7. WHY ============ -->
-  <section class="section" id="why" aria-labelledby="why-title">
-    <div class="wrap grid12">
-      <div class="why">
-        <p class="kicker ink">§ 07 · why</p>
-        <h2 id="why-title" class="ink" data-delay="1" style="margin-bottom:22px">Why I made this.</h2>
-        <!-- RISHIK: write this. Replace the two sentences below with your own
-             story: what got you into robotics, what was frustrating about the
-             existing tools, who you hope uses RoboForge. Keep it short and
-             honest. These two are from your About page as a starting point. -->
-        <p class="ink" data-delay="2">
-          RoboForge is a personal project to make robotics simulation approachable:
-          no installs, no SITL toolchains, no ROS setup. Open the page, and do whatever.
+  <section class="wrap robots" aria-labelledby="robots-title">
+    <h2 id="robots-title">Two other robots</h2>
+    <div class="robot-row">
+      <img src="assets/shots/drone.jpg" width="1600" height="1000" loading="lazy"
+        alt="The drone simulator: a small quadcopter hovering over a street between tall city buildings, with flight controls on the right.">
+      <div>
+        <h3>Drone</h3>
+        <p>
+          A quadcopter in a city full of buildings it can crash into. Fly it with the
+          keyboard, record waypoints, tune its PID loops, then export the mission as a
+          Python script for DroneKit.
         </p>
-        <div class="sig ink" data-delay="3">
-          <span class="hand" style="font-size:30px">Rishik</span>
-          <a class="link" href="about.html">More about me and the project →</a>
-        </div>
+        <a class="btn btn--plain" href="drone.html" data-action="drone">Fly the drone</a>
       </div>
     </div>
+    <div class="robot-row">
+      <div>
+        <h3>Dose</h3>
+        <p>
+          A hospital delivery robot with the reBot arm mounted on top. It's locked, and
+          the password is not "password".
+        </p>
+        <button type="button" class="btn btn--plain" data-action="dose">Enter the code</button>
+      </div>
+    </div>
+    <p class="later">Next on my list: a humanoid, a quadruped, a mobile base and a submarine.</p>
+  </section>
+
+  <section class="wrap notebook" aria-labelledby="notebook-title">
+    <h2 id="notebook-title">Lab notebook</h2>
+    <p class="muted">From the project's git history, newest first.</p>
+    <!-- RISHIK: add photo of your setup, an early sketch, or the first version of the
+         sim here, e.g.
+         <figure><img src="assets/notebook/first-version.jpg" alt="…"><figcaption>…</figcaption></figure> -->
+    <ol class="log">
+      <li><time datetime="2026-10-26">2026-10-26</time><p>Redesigned this page. Murari Kanishk Balla is credited for web design.</p></li>
+      <li><time datetime="2026-10-26">2026-10-26</time><p>Added the real reBot B601 arm from its CAD files. Fixed the motor housings on joints 2 and 6 spinning along with their links. IK now tries other joint combinations when a pose would make the arm hit itself. The Dose robot got the reBot arm.</p></li>
+      <li><time datetime="2026-05-16">2026-05-16</time><p>Put the site on GitHub Pages. Updated the about page, the home page and the scripts.</p></li>
+      <li><time datetime="2026-05-14">2026-05-14</time><p>Fixed a hole where you could skip the Dose password by typing its URL directly, and fixed a camera feed glitch on the password screen.</p></li>
+      <li><time datetime="2026-05-10">2026-05-10</time><p>Wrote SECURITY.md and added the Dose security module.</p></li>
+      <li><time datetime="2026-05-08">2026-05-08</time><p>Added motion recording, and updated the controls in the HUD and side panel.</p></li>
+      <li><time datetime="2026-05-03">2026-05-03</time><p>First commit.</p></li>
+      <!-- RISHIK: add milestones from before May 2026 (when you started, the first IK
+           that worked, the first drone flight, ...), one line each. -->
+    </ol>
+  </section>
+
+  <section class="wrap why" aria-labelledby="why-title">
+    <h2 id="why-title">Why I made this</h2>
+    <!-- RISHIK: write this. Say what got you into robotics, what bugged you about the
+         tools you tried, and who you want to use RoboForge. Keep it short and honest.
+         The sentence below is your About page sentence, reworded, as a placeholder. -->
+    <p>
+      I wanted robotics simulation to be something you open in a browser and start
+      using right away, without setting up SITL or ROS first.
+    </p>
+    <p><a class="textlink" href="about.html">More about the project</a></p>
   </section>
 
 </main>
 
-<!-- ============ 8. FOOTER ============ -->
 <footer class="site-foot">
-  <div class="wrap row">
-    <span><span class="hand">Made by Rishik Saravanan</span> · lead developer</span>
-    <span><span class="hand">&amp; Murari Kanishk Balla</span> · website &amp; web design</span>
-    <a class="link" href="https://github.com/rsara01/roboFORGE" rel="noopener">GitHub</a>
-    <a class="link" href="about.html">About</a>
-    <span>Built with <a class="link" href="https://threejs.org/" rel="noopener">Three.js</a></span>
-    <span style="margin-left:auto">© 2024–2026</span>
+  <div class="wrap">
+    <span>Rishik Saravanan, lead developer</span>
+    <span>Murari Kanishk Balla, website and web design</span>
+    <a href="https://github.com/rsara01/roboFORGE">GitHub</a>
+    <a href="about.html">About</a>
+    <span class="push">Built with <a href="https://threejs.org/">Three.js</a></span>
   </div>
 </footer>
 
 <input type="file" id="json-input" accept=".json" hidden>
 
-<!-- Loading card, shown while navigating into a simulator -->
 <div class="overlay" id="loader" aria-live="polite">
-  <div class="panel sheet">
-    <svg class="gears" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 8 A24 24 0 1 1 8 32"/><path d="M32 18 A14 14 0 1 0 46 32" style="animation-direction:reverse"/></svg>
-    <div class="label" id="loader-label">Opening the lab…</div>
-  </div>
+  <div class="panel"><span class="spin" aria-hidden="true"></span><span id="loader-label">Opening…</span></div>
 </div>
 
-<!-- Dose access code -->
 <div class="overlay" id="pw-modal" role="dialog" aria-modal="true" aria-labelledby="pw-title">
-  <form class="panel sheet taped" id="pw-form" autocomplete="off">
-    <h2 id="pw-title">Dose robot</h2>
-    <p class="lede">This lab is locked. Enter the access code to launch the hospital robot.</p>
+  <form class="panel" id="pw-form" autocomplete="off">
+    <h2 id="pw-title">Dose</h2>
+    <p>This one's locked. Enter the access code to open the hospital robot.</p>
     <label for="pw-input">Access code</label>
-    <input id="pw-input" type="password" autocomplete="off" placeholder="••••">
-    <div class="err" id="pw-err" role="alert">Nope, that's not it. Try again.</div>
+    <input id="pw-input" type="password" autocomplete="off">
+    <div class="err" id="pw-err" role="alert">That's not it.</div>
     <div class="row">
-      <button class="btn btn--ghost" id="pw-cancel" type="button">Cancel</button>
+      <button class="btn btn--plain" id="pw-cancel" type="button">Cancel</button>
       <button class="btn" id="pw-submit" type="button">Unlock</button>
     </div>
   </form>

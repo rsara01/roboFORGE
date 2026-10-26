@@ -4,40 +4,36 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>About RoboForge</title>
-<meta name="description" content="About RoboForge, a browser-native robotics playground built by Rishik Saravanan and Murari Kanishk Balla.">
+<meta name="description" content="About RoboForge, a browser robotics simulator built by Rishik Saravanan and Murari Kanishk Balla.">
 <meta name="author" content="Rishik Saravanan (lead developer), Murari Kanishk Balla (website and web design)">
-<meta name="theme-color" content="#f5f3f0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0d1b2a" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141517" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="assets/logo-mark.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="site.css">
 <style>
-  .about { padding: clamp(40px, 7vw, 88px) 0 clamp(56px, 8vw, 96px); }
-  .about-head { grid-column: 1 / 8; }
-  .about-head h1 { font-size: clamp(40px, 6vw, 68px); margin-bottom: 14px; }
-  .about-logo {
-    grid-column: 9 / 13; align-self: center;
-    padding: 22px; transform: rotate(2deg);
-  }
-  .about-logo img { width: 100%; filter: var(--logo-filter); }
-  .about-body { grid-column: 1 / 9; }
-  .about-side { grid-column: 9 / 13; display: flex; flex-direction: column; gap: 22px; }
-  .about-body h2 { font-size: clamp(24px, 3vw, 32px); margin: 44px 0 12px; }
-  .about-body h2:first-child { margin-top: 8px; }
-  .about-body p { font-size: 17px; color: var(--ink-2); }
-  .about-body ul { padding-left: 20px; color: var(--ink-2); }
-  .about-body li { margin-bottom: 6px; }
-  .about-body a:not(.btn) { color: var(--ink); text-decoration-color: var(--orange); text-underline-offset: 3px; }
-  .stack { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; margin-top: 6px; }
-  .stack .sheet { padding: 14px 14px 12px; }
-  .stack .label { margin-bottom: 10px; }
-  .stack b { display: block; font: 600 16px/1.3 var(--f-display); }
-  .contact { padding: 20px; }
-  .contact h3 { margin-bottom: 10px; }
-  .contact p { font-size: 15px; margin-bottom: 6px; color: var(--ink-2); }
-  .contact a { color: var(--ink); text-decoration-color: var(--orange); text-underline-offset: 3px; word-break: break-all; }
+  .about { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); gap: 32px 64px; padding-top: clamp(24px, 5vw, 64px); padding-bottom: 80px; }
+  .about h1 { margin-bottom: 14px; }
+  .about h2 { font-size: 26px; margin: 48px 0 12px; }
+  .about p, .about li { color: var(--ink-2); }
+  .about ul { padding-left: 20px; }
+  .about li { margin-bottom: 6px; }
+  .about a:not(.btn) { color: var(--ink); text-decoration-color: var(--line-2); text-underline-offset: 4px; }
+  .about a:not(.btn):hover { text-decoration-color: var(--ink); }
+  .team { margin: 0; }
+  .team div { display: flex; flex-wrap: wrap; gap: 2px 14px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .team dt { font-weight: 600; color: var(--ink); }
+  .team dd { margin: 0; color: var(--ink-3); }
+  .inside { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 24px; margin: 0; }
+  .inside dt { color: var(--ink-3); }
+  .inside dd { margin: 0; color: var(--ink); }
+  .side { padding-top: 12px; }
+  .side img { width: 140px; height: auto; margin-bottom: 28px; }
+  @media (prefers-color-scheme: dark) { .side img { filter: invert(1); } }
+  .side h2 { margin-top: 0; font-size: 20px; }
+  @media (max-width: 860px) { .about { grid-template-columns: minmax(0, 1fr); } .side { order: -1; } .side img { width: 96px; } }
 </style>
 </head>
 <body>
@@ -45,9 +41,9 @@
 <a class="skip-link" href="#main">Skip to content</a>
 
 <header class="topbar">
-  <a class="brand" href="./" aria-label="RoboForge home">
-    <img src="assets/logo-mark.svg" alt="" width="38" height="30">
-    <span><b>RoboForge</b><br><small>robotics in a browser tab</small></span>
+  <a class="brand" href="./">
+    <img src="assets/logo-mark.svg" alt="" width="33" height="26">
+    RoboForge
   </a>
   <nav aria-label="Main">
     <a href="arm.html?action=new">Arm Lab</a>
@@ -56,83 +52,74 @@
   </nav>
 </header>
 
-<main id="main" class="about">
-  <div class="wrap grid12">
-    <div class="about-head">
-      <p class="kicker">about</p>
-      <h1>About RoboForge</h1>
-      <p class="lede">A browser-native robotics playground.</p>
-    </div>
-    <div class="about-logo sheet taped">
-      <img src="assets/logo.svg" alt="RoboForge logo">
-    </div>
+<main id="main" class="wrap about">
+  <div>
+    <h1>About RoboForge</h1>
+    <p class="lede">A robotics simulator that runs in your browser.</p>
 
-    <div class="about-body">
-      <h2>The project</h2>
-      <p>
-        RoboForge is a web-based robotics simulator focused on accessibility and ease of use.
-        Since most of the complexity of robotics software lies in the setup and configuration,
-        RoboForge takes a different approach: it runs entirely in the browser, with no installations or
-        dependencies required. the current simulations available are the arm and quadcopter simulations.
-        the DOSE tab is currently under development but if you guess the password, feel free to use it.
-      </p>
+    <h2>The project</h2>
+    <p>
+      RoboForge is a web-based robotics simulator focused on accessibility and ease of use.
+      Since most of the complexity of robotics software lies in the setup and configuration,
+      RoboForge takes a different approach: it runs entirely in the browser, with no installations or
+      dependencies required. the current simulations available are the arm and quadcopter simulations.
+      the DOSE tab is currently under development but if you guess the password, feel free to use it.
+    </p>
 
-      <h2>The team</h2>
-      <div class="stack" style="margin-bottom:18px">
-        <div class="sheet"><span class="label">Lead developer</span><b>Rishik Saravanan</b></div>
-        <div class="sheet"><span class="label">Website &amp; web design</span><b>Murari Kanishk Balla</b></div>
-      </div>
-      <p>
-        Built by <strong>Rishik Saravanan</strong> and <strong>Murari Kanishk Balla</strong>. RoboForge is a personal
-        project to make robotics simulation approachable: no installs, no SITL
-        toolchains, no ROS setup. Open the page, and do whatever.
-      </p>
+    <h2>The team</h2>
+    <dl class="team">
+      <div><dt>Rishik Saravanan</dt><dd>lead developer</dd></div>
+      <div><dt>Murari Kanishk Balla</dt><dd>website and web design</dd></div>
+    </dl>
+    <p style="margin-top:18px">
+      RoboForge is a personal project to make robotics simulation approachable. You don't
+      have to set up SITL or ROS first. Open the page, and do whatever.
+    </p>
 
-      <h2>What's inside</h2>
-      <div class="stack">
-        <div class="sheet"><span class="label">Render</span><b>Three.js + WebGL2</b></div>
-        <div class="sheet"><span class="label">Arm physics</span><b>Custom rigid body + AABB stacking</b></div>
-        <div class="sheet"><span class="label">Drone dynamics</span><b>Quadrotor + cascaded PID</b></div>
-        <div class="sheet"><span class="label">Geocoding</span><b>OpenStreetMap Nominatim</b></div>
-        <div class="sheet"><span class="label">Imagery</span><b>OpenStreetMap raster tiles</b></div>
-        <div class="sheet"><span class="label">Elevation</span><b>AWS Mapzen Terrain Tiles</b></div>
-        <div class="sheet"><span class="label">Audio</span><b>WebAudio (synthesized)</b></div>
-        <div class="sheet"><span class="label">Scripting</span><b>Sandboxed JS host API</b></div>
-      </div>
+    <h2>What's inside</h2>
+    <dl class="inside">
+      <dt>Render</dt><dd>Three.js + WebGL2</dd>
+      <dt>Arm physics</dt><dd>Custom rigid body + AABB stacking</dd>
+      <dt>Drone dynamics</dt><dd>Quadrotor + cascaded PID</dd>
+      <dt>Geocoding</dt><dd>OpenStreetMap Nominatim</dd>
+      <dt>Imagery</dt><dd>OpenStreetMap raster tiles</dd>
+      <dt>Elevation</dt><dd>AWS Mapzen Terrain Tiles</dd>
+      <dt>Audio</dt><dd>WebAudio (synthesized)</dd>
+      <dt>Scripting</dt><dd>Sandboxed JS host API</dd>
+    </dl>
 
-      <h2>Open data acknowledgements</h2>
-      <ul>
-        <li>Map imagery: &copy; OpenStreetMap contributors (ODbL).</li>
-        <li>Geocoding: Nominatim, run by the OSM Foundation.</li>
-        <li>Elevation: Mapzen Terrain Tiles, hosted by AWS Open Data.</li>
-        <li>3D library: Three.js by mrdoob and contributors (MIT).</li>
-      </ul>
+    <h2>Open data acknowledgements</h2>
+    <ul>
+      <li>Map imagery: &copy; OpenStreetMap contributors (ODbL).</li>
+      <li>Geocoding: Nominatim, run by the OSM Foundation.</li>
+      <li>Elevation: Mapzen Terrain Tiles, hosted by AWS Open Data.</li>
+      <li>3D library: Three.js by mrdoob and contributors (MIT).</li>
+    </ul>
 
-      <h2>Drone export target</h2>
-      <p>
-        Mission exports target <a href="https://dronekit-python.readthedocs.io/">DroneKit-Python</a>.
-        Run the generated script against an ArduPilot SITL instance for safe testing,
-        or against a real vehicle once you've validated the trajectory in simulation.
-      </p>
+    <h2>Drone export target</h2>
+    <p>
+      Mission exports target <a href="https://dronekit-python.readthedocs.io/">DroneKit-Python</a>.
+      Run the generated script against an ArduPilot SITL instance for safe testing,
+      or against a real vehicle once you've validated the trajectory in simulation.
+    </p>
 
-      <p style="margin-top:36px"><a class="btn" href="./">Back to the simulator <span class="arr" aria-hidden="true">→</span></a></p>
-    </div>
-
-    <aside class="about-side">
-      <div class="contact sheet taped">
-        <h3>Contact</h3>
-        <p><strong>Discord:</strong> <code>anti.suction</code></p>
-        <p>Email: <a href="mailto:contact.roboforge@gmail.com?subject=RoboForge%20Contact" target="_blank" rel="noopener">contact.roboforge@gmail.com</a></p>
-      </div>
-      <div class="note">built in a browser, for a browser.</div>
-    </aside>
+    <p style="margin-top:36px"><a class="btn" href="./">Back to the home page</a></p>
   </div>
+
+  <aside class="side">
+    <img src="assets/logo.svg" alt="RoboForge logo" width="140" height="115">
+    <h2>Contact</h2>
+    <p><strong>Discord:</strong> <code>anti.suction</code></p>
+    <p>Email: <a href="mailto:contact.roboforge@gmail.com?subject=RoboForge%20Contact">contact.roboforge@gmail.com</a></p>
+  </aside>
 </main>
 
 <footer class="site-foot">
-  <div class="wrap row">
-    <span class="hand">RoboForge · Rishik Saravanan &amp; Murari Kanishk Balla</span>
-    <span style="margin-left:auto">Built with <a class="link" href="https://threejs.org/" rel="noopener">Three.js</a></span>
+  <div class="wrap">
+    <span>Rishik Saravanan, lead developer</span>
+    <span>Murari Kanishk Balla, website and web design</span>
+    <a href="https://github.com/rsara01/roboFORGE">GitHub</a>
+    <span class="push">Built with <a href="https://threejs.org/">Three.js</a></span>
   </div>
 </footer>
 

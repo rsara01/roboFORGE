@@ -1068,6 +1068,17 @@ async function bootInitialContent() {
   }
 
   app.loadPreset('6dof');
+
+  // "Run this in the Arm Lab" from the home page: load the script, give the arm
+  // a gripper so grab()/release() have something to work with, and run it.
+  const pendingScript = sessionStorage.getItem('pendingScript');
+  if (params.get('run') === '1' && pendingScript) {
+    sessionStorage.removeItem('pendingScript');
+    document.getElementById('script-area').value = pendingScript;
+    document.querySelector('.tab[data-tab="script"]')?.click();
+    if (!robot.endEffectors.length) app.addEndEffector('gripper');
+    setTimeout(() => app.runScript(), 400);
+  }
 }
 
 Loading.show('Loading simulator…', 120);

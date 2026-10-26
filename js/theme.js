@@ -3,9 +3,12 @@
 const KEY = 'roboforge.theme';
 
 const DEFAULT = {
-  accent: '#667eea',
-  accent2: '#764ba2',
+  accent: '#f08327',
+  accent2: '#f08327',
 };
+// The old purple defaults. Saved themes still holding them were never really
+// chosen by anyone, so they fall back to the current default.
+const RETIRED = ['#667eea', '#764ba2'];
 
 function hexToRgb(hex) {
   const m = hex.replace('#', '');
@@ -27,7 +30,12 @@ function shade(hex, amount) {
 
 export const Theme = {
   load() {
-    try { return Object.assign({}, DEFAULT, JSON.parse(localStorage.getItem(KEY) || '{}')); }
+    try {
+      const saved = JSON.parse(localStorage.getItem(KEY) || '{}');
+      if (RETIRED.includes(String(saved.accent).toLowerCase())) delete saved.accent;
+      if (RETIRED.includes(String(saved.accent2).toLowerCase())) delete saved.accent2;
+      return Object.assign({}, DEFAULT, saved);
+    }
     catch { return { ...DEFAULT }; }
   },
   save(t) {
@@ -39,7 +47,8 @@ export const Theme = {
     root.style.setProperty('--accent-2', t.accent2);
     root.style.setProperty('--accent-soft', shade(t.accent, 0.5));
     root.style.setProperty('--accent-deep', shade(t.accent, -0.3));
-    root.style.setProperty('--brand-grad', `linear-gradient(135deg, ${t.accent} 0%, ${t.accent2} 100%)`);
+    // Kept as a (flat) gradient value so existing `background: var(--brand-grad)` rules still work.
+    root.style.setProperty('--brand-grad', `linear-gradient(${t.accent}, ${t.accent})`);
   },
   set(partial) {
     const next = { ...this.load(), ...partial };

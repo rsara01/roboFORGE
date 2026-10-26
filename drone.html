@@ -23,9 +23,9 @@
 </script>
 <style>
   :root {
-    --accent: #667eea;
-    --accent-2: #764ba2;
-    --brand-grad: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    --accent: #f08327;
+    --accent-2: #f08327;
+    --brand-grad: linear-gradient(var(--accent), var(--accent));
     --bg: #0c1014;
     --bg-2: #161b22;
     --bg-3: #1d2530;
@@ -70,7 +70,7 @@
     border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 12px;
   }
   button:hover { background: #243044; border-color: var(--accent); }
-  button.primary { background: var(--brand-grad); border: none; color: white; }
+  button.primary { background: var(--brand-grad); border: none; color: #1b1004; }
   button.danger { background: #3a1d1d; border-color: #5b2a2a; color: #ffb4b4; }
   input, select {
     background: var(--bg); color: var(--fg);
