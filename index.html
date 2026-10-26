@@ -1,6 +1,6 @@
 <!--
 ╔══════════════════════════════════════════════════════════════╗
-║ RoboForge - Dashboard & Launcher                            ║
+║ RoboForge - Home                                            ║
 ║ Created by: Rishik Saravanan                                ║
 ║ Birthday: May 25th                                          ║
 ║ © 2024-2026. All rights reserved.                           ║
@@ -12,608 +12,480 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RoboForge - Dashboard</title>
-<style>
-  :root {
-    --accent: #667eea;
-    --accent-2: #764ba2;
-    --orange: #f08327;
-    --bg: #f5f3f0;
-    --text: #2a2520;
-    --text-light: #7a7470;
-    --border: #e8e4df;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg);
-    min-height: 100vh;
-    color: var(--text);
-    overflow-x: hidden;
-    position: relative;
-  }
+<title>RoboForge: a robot arm lab in your browser</title>
+<meta name="description" content="Build a robot arm, teach it to pick things up, and program it in JavaScript. A robotics simulator that runs entirely in your browser, by Rishik Saravanan.">
+<meta name="theme-color" content="#f5f3f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1b2a" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="assets/logo-mark.svg" type="image/svg+xml">
 
-  header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 20px 44px; color: var(--text); gap: 24px;
-    position: relative; z-index: 2;
-    border-bottom: 1px solid var(--border);
-  }
-  header .brand { display: flex; align-items: baseline; gap: 10px; }
-  header .brand img { height: 38px; display: block; }
-  header .brand .name { font-size: 18px; font-weight: 700; letter-spacing: 0.5px; }
-  header .brand .sub { font-size: 10px; color: var(--text-light); letter-spacing: 0.3px; text-transform: uppercase; }
-  header nav { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-left: auto; }
-  header nav a, header nav button {
-    color: var(--text); text-decoration: none;
-    padding: 6px 12px; border-radius: 4px; font-size: 12px;
-    background: transparent;
-    border: 1px solid var(--border);
-    cursor: pointer; transition: all 0.15s;
-  }
-  header nav a:hover, header nav button:hover { 
-    background: white; border-color: var(--text-light);
-  }
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="site.css">
+<link rel="stylesheet" href="home.css">
 
-  main {
-    max-width: 1200px; margin: 0 auto; padding: 40px 44px 80px;
-    position: relative; z-index: 2;
-  }
-
-  .hero {
-    color: var(--text); text-align: left; margin-bottom: 60px; max-width: 65%;
-  }
-  .hero h1 {
-    font-size: 48px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 14px; line-height: 1.1;
-  }
-  .hero .lede {
-    font-size: 16px; color: var(--text-light); line-height: 1.6; max-width: 480px;
-  }
-
-  .actions {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    grid-template-rows: auto auto;
-    gap: 24px;
-    margin-bottom: 48px;
-  }
-  
-  .action {
-    background: white;
-    border-radius: 0;
-    padding: 28px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex; flex-direction: column; gap: 14px;
-    border: 1px solid var(--border);
-    text-align: left;
-    position: relative;
-  }
-  .action:hover {
-    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
-    border-color: var(--accent);
-  }
-  
-  .action#act-drone {
-    grid-row: 1 / 3;
-    padding: 36px;
-  }
-  .action#act-drone .head { display: flex; align-items: flex-start; gap: 16px; }
-  .action#act-drone .badge {
-    width: 52px; height: 52px;
-    border-radius: 3px;
-    background: var(--accent);
-    color: white; display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 18px; flex-shrink: 0;
-  }
-  .action#act-drone h2 { font-size: 28px; color: var(--text); margin-bottom: 8px; }
-  .action#act-drone p { color: var(--text-light); font-size: 14px; line-height: 1.6; }
-  .action#act-drone .meta { font-size: 10px; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px; }
-
-  .action#act-arm {
-    padding: 24px;
-  }
-  .action#act-arm .badge {
-    width: 40px; height: 40px;
-    border-radius: 3px;
-    background: var(--orange);
-    color: white; display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 16px;
-  }
-  .action#act-arm h2 { font-size: 16px; color: var(--text); }
-  .action#act-arm p { color: var(--text-light); font-size: 13px; line-height: 1.5; }
-  .action#act-arm .meta { font-size: 10px; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
-
-  .action#act-dose {
-    padding: 24px;
-  }
-  .action#act-dose .badge {
-    width: 40px; height: 40px;
-    border-radius: 3px;
-    background: #e8629b;
-    color: white; display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 16px;
-  }
-  .action#act-dose h2 { font-size: 16px; color: var(--text); }
-  .action#act-dose p { color: var(--text-light); font-size: 13px; line-height: 1.5; }
-  .action#act-dose .meta { font-size: 10px; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
-  .action#act-dose::after {
-    content: 'NEW'; position: absolute; top: 12px; right: 12px;
-    background: var(--orange); color: white;
-    font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
-    padding: 3px 6px; border-radius: 0;
-  }
-
-  .action#act-load {
-    padding: 24px;
-  }
-  .action#act-load .badge {
-    width: 40px; height: 40px;
-    border-radius: 3px;
-    background: #667eea;
-    color: white; display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 14px;
-  }
-  .action#act-load h2 { font-size: 16px; color: var(--text); }
-  .action#act-load p { color: var(--text-light); font-size: 13px; line-height: 1.5; }
-  .action#act-load .meta { font-size: 10px; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
-
-  .action .head {
-    display: flex; align-items: center; gap: 10px;
-  }
-
-  .platforms {
-    background: transparent; border: none;
-    padding: 0; box-shadow: none;
-    margin-top: 60px; margin-bottom: 40px;
-  }
-  .platforms .head {
-    display: flex; justify-content: flex-start; align-items: baseline; gap: 16px; margin-bottom: 24px;
-    border-bottom: 2px solid var(--text);
-    padding-bottom: 12px;
-  }
-  .platforms h2 { font-size: 20px; font-weight: 700; color: var(--text); }
-  .platforms .lede { font-size: 12px; color: var(--text-light); font-style: italic; }
-  
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-  }
-  .tile {
-    display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
-    padding: 18px;
-    background: white;
-    border-radius: 0;
-    border: 1px solid var(--border);
-    text-align: left;
-    opacity: 0.8;
-    cursor: not-allowed;
-    transition: all 0.2s;
-  }
-  .tile:hover {
-    border-color: var(--text-light);
-    opacity: 0.95;
-  }
-  .tile .glyph {
-    width: 36px; height: 36px;
-    border-radius: 3px;
-    background: var(--border);
-    color: var(--text-light);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-weight: 600; letter-spacing: 0.3px;
-  }
-  .tile .name { font-weight: 600; color: var(--text); font-size: 14px; }
-  .tile .status {
-    font-size: 10px; color: var(--text-light);
-    text-transform: uppercase; letter-spacing: 0.4px;
-  }
-
-  footer {
-    text-align: left; color: var(--text-light);
-    font-size: 11px; margin-top: 80px; padding-top: 24px;
-    border-top: 1px solid var(--border);
-  }
-  footer a { color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border); }
-  footer a:hover { border-bottom-color: var(--text); }
-  .file-input { display: none; }
-
-  /* --- Welcome overlay (first visit only) --- */
-  #welcome {
-    position: fixed; inset: 0; z-index: 50;
-    background: var(--bg);
-    display: flex; align-items: center; justify-content: center;
-    transition: opacity 0.45s ease;
-  }
-  #welcome.hide { opacity: 0; pointer-events: none; }
-  #welcome .card {
-    text-align: left; color: var(--text); padding: 48px 56px;
-    max-width: 520px; animation: pop 0.55s ease-out both;
-  }
-  #welcome .logo {
-    width: 88px; height: 88px; border-radius: 3px;
-    background: var(--accent); padding: 12px;
-    margin: 0 0 24px 0; display: block;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  }
-  #welcome h1 {
-    font-size: 36px; font-weight: 700; letter-spacing: -0.5px;
-    margin-bottom: 12px;
-  }
-  #welcome p { font-size: 14px; color: var(--text-light); line-height: 1.6; margin-bottom: 24px; }
-  #welcome button {
-    background: var(--text); color: white;
-    border: none; border-radius: 0;
-    padding: 11px 24px; font-size: 14px; font-weight: 600;
-    letter-spacing: 0.3px; cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-    transition: all 0.15s;
-  }
-  #welcome button:hover { background: var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,0.16); }
-  @keyframes pop {
-    from { opacity: 0; transform: translateY(10px) scale(0.98); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-  }
-
-  /* --- Loading screen --- */
-  #loader {
-    position: fixed; inset: 0; z-index: 60;
-    background: var(--bg);
-    display: none; align-items: center; justify-content: center;
-    flex-direction: column; gap: 18px;
-    transition: opacity 0.45s ease;
-  }
-  #loader.show { display: flex; }
-  #loader.hide { opacity: 0; pointer-events: none; }
-  #loader .ring {
-    width: 48px; height: 48px;
-    border: 2px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  #loader .label {
-    color: var(--text-light); font-size: 12px; letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* --- Password modal --- */
-  #pw-modal {
-    position: fixed; inset: 0; z-index: 70;
-    background: rgba(42, 37, 32, 0.4);
-    backdrop-filter: blur(4px);
-    display: none; align-items: center; justify-content: center;
-  }
-  #pw-modal.show { display: flex; }
-  #pw-modal .panel {
-    background: white; border-radius: 0;
-    padding: 36px 40px; width: 400px; max-width: 92vw;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-    animation: pop 0.25s ease-out both;
-    border: 1px solid var(--border);
-  }
-  #pw-modal h2 { font-size: 22px; margin-bottom: 6px; color: var(--text); font-weight: 700; }
-  #pw-modal .lede { font-size: 13px; color: var(--text-light); line-height: 1.6; margin-bottom: 20px; }
-  #pw-modal label { display: block; font-size: 12px; color: var(--text); margin-bottom: 8px; font-weight: 600; letter-spacing: 0.3px; }
-  #pw-modal input {
-    width: 100%; border: 1px solid var(--border); border-radius: 0;
-    padding: 10px 12px; font-size: 14px; outline: none; background: white;
-    transition: all 0.15s;
-    margin-bottom: 16px;
-  }
-  #pw-modal input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(102,126,234,0.1); }
-  #pw-modal .err {
-    display: none; color: #c0392b; font-size: 12px;
-    margin-top: 8px; line-height: 1.45;
-  }
-  #pw-modal .err.show { display: block; }
-  #pw-modal .row {
-    display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;
-  }
-  #pw-modal button {
-    border-radius: 0; padding: 10px 20px; font-size: 12px; font-weight: 600;
-    cursor: pointer; border: 1px solid var(--border);
-    transition: all 0.12s;
-  }
-  #pw-modal button.cancel {
-    background: white; color: var(--text);
-  }
-  #pw-modal button.cancel:hover { background: var(--border); }
-  #pw-modal button.primary {
-    background: var(--text); color: white; border-color: var(--text);
-  }
-  #pw-modal button.primary:hover { background: var(--accent); border-color: var(--accent); }
-
-  @media (max-width: 768px) {
-    .actions {
-      grid-template-columns: 1fr;
+<script>
+  // Reveal-on-scroll is opt-in: content stays visible if the module never runs.
+  document.documentElement.classList.add('js-reveal');
+  setTimeout(function () {
+    if (!document.documentElement.classList.contains('reveal-ready')) {
+      document.documentElement.classList.remove('js-reveal');
     }
-    .action#act-drone {
-      grid-row: auto;
-    }
-    .hero {
-      max-width: 100%;
-    }
-    .grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
+  }, 2500);
+</script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+    "three/examples/jsm/": "https://unpkg.com/three@0.160.0/examples/jsm/"
   }
-</style>
+}
+</script>
 </head>
 <body>
 
-<header>
-  <div class="brand">
-    <img src="assets/logo-mark.svg" alt="RoboForge logo" />
-    <div>
-      <div class="name">ROBOFORGE</div>
-      <div class="sub">Robotics Simulator</div>
-    </div>
-  </div>
-  <nav>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <a class="brand" href="./" aria-label="RoboForge home">
+    <img src="assets/logo-mark.svg" alt="" width="38" height="30">
+    <span><b>RoboForge</b><br><small>robotics in a browser tab</small></span>
+  </a>
+  <nav aria-label="Main">
+    <a href="arm.html?action=new" data-action="arm">Arm Lab</a>
+    <a href="drone.html" data-action="drone">Drone</a>
+    <button type="button" data-action="load">Open project</button>
     <a href="about.html">About</a>
   </nav>
 </header>
 
-<main>
-  <div class="hero">
-    <h1>Robotics Simulation</h1>
-    <p class="lede">A toolkit for designing, animating, and controlling robotic systems. Build from first principles, script complex behaviors, export to real hardware.</p>
-  </div>
+<main id="main">
 
-  <div class="actions">
-    <div class="action" id="act-drone">
-      <div class="head">
-        <div class="badge">UAV</div>
-        <div>
-          <h2>Drone Simulator</h2>
-          <div class="meta">Available</div>
+  <!-- ============ 1. HERO ============ -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="wrap grid12">
+      <div class="hero-copy">
+        <p class="kicker ink">RoboForge · a robotics lab</p>
+        <h1 id="hero-title" class="ink" data-delay="1">
+          Build a robot arm. Teach it to pick things up.
+          <span class="ink-orange">In your browser.<svg class="draw" viewBox="0 0 300 20" preserveAspectRatio="none" aria-hidden="true"><path d="M3 13 C 70 4, 160 18, 297 7"/></svg></span>
+        </h1>
+        <p class="lede ink" data-delay="2">
+          No installs, no ROS, no toolchain. Drag the joints, write a few lines of
+          JavaScript, and watch a real kinematics solver do the hard part.
+        </p>
+        <div class="hero-cta ink" data-delay="3">
+          <a class="btn" href="arm.html?action=new" data-action="arm">Open the Arm Lab <span class="arr" aria-hidden="true">→</span></a>
+          <a class="btn btn--ghost" href="drone.html" data-action="drone">Fly a Drone</a>
+        </div>
+        <p class="hero-alt ink" data-delay="3">
+          Already built something? <button type="button" data-action="load">Open a saved project</button> (.json)
+        </p>
+      </div>
+
+      <figure class="hero-stage sheet taped ink" data-delay="2" aria-label="Interactive robot arm. It reaches toward your cursor; click the floor to drop a block.">
+        <div class="stage-slot" id="hero-slot">
+          <!-- Hand-drawn stand-in until the 3D arm has loaded. -->
+          <svg class="stage-sketch draw" viewBox="0 0 520 400" role="img" aria-label="Sketch of a robot arm reaching for a block">
+            <path class="s2" d="M20 342 L500 342"/>
+            <path class="s2" d="M44 342 l-12 13 M84 342 l-12 13 M124 342 l-12 13 M164 342 l-12 13 M204 342 l-12 13 M244 342 l-12 13 M284 342 l-12 13 M324 342 l-12 13 M364 342 l-12 13 M404 342 l-12 13 M444 342 l-12 13 M484 342 l-12 13"/>
+            <path class="s" d="M196 342 L205 303 L275 303 L284 342"/>
+            <path class="s" d="M215 303 C 215 284, 265 284, 265 303"/>
+            <path class="s" d="M240 289 L226 190 M232 290 L218 192 M248 288 L234 190"/>
+            <path class="s" d="M226 190 L352 138 M222 180 L348 129 M230 200 L356 148"/>
+            <path class="s" d="M352 138 L402 196"/>
+            <path class="s" d="M388 204 L416 204 M393 204 L385 228 M411 204 L419 228"/>
+            <circle class="s" cx="240" cy="289" r="12"/>
+            <circle class="s" cx="226" cy="190" r="13"/>
+            <circle class="s" cx="352" cy="138" r="11"/>
+            <path class="s2" d="M188 196 A 40 40 0 0 1 238 152" stroke-dasharray="4 6"/>
+            <rect class="blk" x="390" y="312" width="30" height="30" rx="2" transform="rotate(-4 405 327)"/>
+            <path class="dim" d="M240 360 L240 382 M402 360 L402 382 M240 371 L402 371 M240 371 l9 -4 M240 371 l9 4 M402 371 l-9 -4 M402 371 l-9 4"/>
+            <text x="300" y="394">reach</text>
+          </svg>
+        </div>
+        <div class="readout stage-readout" id="hero-readout" aria-hidden="true">j1  —
+j2  —
+j3  —
+j4  —
+j5  —
+j6  —</div>
+        <span class="stage-hint" aria-hidden="true">click the floor → drop a block</span>
+        <span class="annot hand hero-annot" aria-hidden="true">
+          move your mouse here
+          <svg class="draw" viewBox="0 0 56 40"><path d="M4 6 C 18 10, 34 18, 46 34 M46 34 l-10 -1 M46 34 l0 -10"/></svg>
+        </span>
+      </figure>
+    </div>
+
+    <!-- First-visit hello (replaces the old full-screen welcome) -->
+    <div class="wrap">
+      <aside class="note first-note" id="first-note" hidden aria-label="Welcome note">
+        Hi! Everything on this page is live. Poke at it.
+        <button type="button" class="chip" id="first-note-ok">got it</button>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ 2. IK EXPLAINER ============ -->
+  <section class="section" id="solver" aria-labelledby="solver-title">
+    <div class="wrap grid12">
+      <div class="sec-head">
+        <p class="kicker ink">§ 02 · the solver</p>
+        <h2 id="solver-title" class="ink" data-delay="1">It's real math, not an animation.</h2>
+        <p class="ink" data-delay="2">
+          Nothing here is a recording. To reach a point, the arm runs a solver
+          called <strong>CCD</strong>: starting at the wrist and working back to
+          the shoulder, it turns each joint so the tip points a little closer
+          to the target, then repeats until it's close enough.
+        </p>
+        <p class="ink" data-delay="2">Drag the orange dot. Slow it down to watch it think, one joint at a time.</p>
+        <div class="note ink" data-delay="3">Every arm in RoboForge reaches this way, including yours.</div>
+      </div>
+
+      <figure class="toy-sheet sheet taped ink" data-delay="1" style="margin:0">
+        <div class="toy-canvas" id="ik-toy" role="application" aria-label="Two-dimensional three-joint arm. Drag or use arrow keys to move the target." tabindex="0">
+          <svg viewBox="0 0 640 400" aria-hidden="true">
+            <path d="M40 330 L600 330" fill="none" stroke="currentColor" stroke-opacity=".35" stroke-width="1.5"/>
+            <g fill="none" stroke="currentColor" stroke-opacity=".3" stroke-width="2" stroke-dasharray="5 6" stroke-linecap="round">
+              <path d="M170 330 L190 210 L320 150 L420 210"/>
+              <path d="M170 330 L220 215 L350 175 L445 222"/>
+            </g>
+            <g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round">
+              <path d="M170 330 L240 222 L372 196 L462 248"/>
+            </g>
+            <g fill="var(--card)" stroke="currentColor" stroke-width="3">
+              <circle cx="170" cy="330" r="10"/><circle cx="240" cy="222" r="9"/><circle cx="372" cy="196" r="9"/>
+            </g>
+            <circle cx="476" cy="262" r="12" fill="var(--orange)" stroke="currentColor" stroke-width="2.5"/>
+            <path d="M462 248 L476 262" stroke="var(--orange)" stroke-width="2" stroke-dasharray="3 4"/>
+          </svg>
+        </div>
+        <div class="toy-controls">
+          <label>speed <input type="range" id="ik-speed" min="0" max="1" step="0.01" value="0.6" aria-label="Solver speed"></label>
+          <button type="button" class="chip" id="ik-step">step one joint</button>
+          <span class="spacer"></span>
+          <span id="ik-status" aria-live="polite">iteration 0 · 0.000 m away</span>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ============ 3. CODE ============ -->
+  <section class="section" id="code" aria-labelledby="code-title">
+    <div class="wrap grid12">
+      <div class="sec-head">
+        <p class="kicker ink">§ 03 · scripting</p>
+        <h2 id="code-title" class="ink" data-delay="1">Talk to it in code.</h2>
+        <p class="ink" data-delay="2">
+          The Arm Lab has a script tab that runs plain JavaScript. This box uses
+          the exact same commands: <code>moveTo</code> turns one joint,
+          <code>ikTo</code> reaches for a point in space, <code>gripper</code>
+          and <code>grab</code> do what you'd hope.
+        </p>
+        <p class="annot hand hand--blue ink" data-delay="3" aria-hidden="true">
+          <svg class="draw" viewBox="0 0 56 40"><path d="M50 8 C 34 8, 16 16, 8 32 M8 32 l1 -10 M8 32 l9 -4"/></svg>
+          edit it. break it. press run.
+        </p>
+      </div>
+
+      <figure class="code-sheet sheet ink" data-delay="1" style="margin:0">
+        <div class="code-bar">
+          <span class="fname">pick_and_place.js</span>
+          <button type="button" class="chip" data-example="wave">wave</button>
+          <button type="button" class="chip" data-example="stack">stack two blocks</button>
+          <button type="button" class="chip" data-example="circle">draw a circle</button>
+          <button type="button" class="btn" id="code-run" style="padding:9px 14px;font-size:14px">Run ▸</button>
+        </div>
+        <div class="code-body">
+          <label for="code-input" class="sr-only">Robot script</label>
+          <textarea id="code-input" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off">// Reach, grab, put it somewhere else.
+await moveTo(1, 0.8)          // tilt the shoulder
+await ikTo(0.35, 0.05, 0.2)   // hover over the block
+gripper(0)                    // close the jaws
+grab()                        // pick it up
+await ikTo(0.1, 0.3, -0.3)    // carry it
+release()</textarea>
+          <div class="code-view" id="code-slot" aria-label="Preview of the arm running your script">
+            <span class="stage-hint" aria-hidden="true">the arm runs here</span>
+          </div>
+        </div>
+        <pre class="code-log" id="code-log" aria-live="polite">// output shows up here</pre>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ============ 4. BRING YOUR OWN ROBOT ============ -->
+  <section class="section" id="byor" aria-labelledby="byor-title">
+    <div class="wrap">
+      <div class="grid12" style="margin-bottom:34px">
+        <div class="sec-head" style="grid-column:1 / 8">
+          <p class="kicker ink">§ 04 · import</p>
+          <h2 id="byor-title" class="ink" data-delay="1">Bring your own robot.</h2>
+          <p class="ink" data-delay="2">
+            Robots are usually described in a format called <strong>URDF</strong>: a list of
+            links, joints and 3D meshes. Hand RoboForge one and it becomes a working arm
+            you can drive, solve IK on, script, and use to pick things up.
+          </p>
         </div>
       </div>
-      <p>Design and fly quadrotor missions over 3D terrain. Build flight paths with tunable PID controllers. Export flight plans to real drones.</p>
-    </div>
+      <div class="grid12">
+        <div class="byor-drop ink">
+          <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-describedby="drop-help">
+            <div>
+              <svg class="glyph" viewBox="0 0 64 64" aria-hidden="true">
+                <path d="M14 40 L14 52 L50 52 L50 40"/>
+                <path d="M32 10 L32 40 M21 29 L32 40 L43 29"/>
+              </svg>
+              <h3>Drop any robot arm's URDF here.</h3>
+              <p id="drop-help">A .urdf with its meshes folder, a whole folder, or a .zip of the robot package.</p>
+              <p class="types">.urdf · .zip · STL · DAE · OBJ · GLB</p>
+            </div>
+          </div>
+          <input type="file" id="byor-files" multiple hidden>
+          <input type="file" id="byor-folder" webkitdirectory multiple hidden>
+        </div>
 
-    <div class="action" id="act-arm">
-      <div class="head">
-        <div class="badge">ARM</div>
-        <h2>Robotic Arm</h2>
+        <div class="byor-side">
+          <p class="hand ink" style="margin:0 0 2px">no URDF handy? try one of these →</p>
+          <button type="button" class="sample sheet ink" data-sample="so101" data-delay="1">
+            <span class="thumb" aria-hidden="true"><svg viewBox="0 0 44 44"><path d="M10 38 L34 38 M22 38 L22 26 L30 14 L38 18"/><circle cx="22" cy="26" r="2.5"/><circle cx="30" cy="14" r="2.5"/></svg></span>
+            <span><b>SO-101</b><small>small 3D-printable arm · 6 joints</small></span>
+            <span class="go" aria-hidden="true">→</span>
+          </button>
+          <button type="button" class="sample sheet ink" data-sample="panda" data-delay="2">
+            <span class="thumb" aria-hidden="true"><svg viewBox="0 0 44 44"><path d="M10 38 L34 38 M20 38 L20 22 L28 10 L36 16 L34 26"/><circle cx="20" cy="22" r="2.5"/><circle cx="28" cy="10" r="2.5"/><circle cx="36" cy="16" r="2.5"/></svg></span>
+            <span><b>Franka Panda</b><small>research arm · 7 joints + fingers</small></span>
+            <span class="go" aria-hidden="true">→</span>
+          </button>
+          <button type="button" class="sample sheet ink" data-sample="ur5e" data-delay="3">
+            <span class="thumb" aria-hidden="true"><svg viewBox="0 0 44 44"><path d="M10 38 L34 38 M16 38 L16 30 L16 20 L32 20 L32 30"/><circle cx="16" cy="20" r="3"/><circle cx="32" cy="20" r="3"/></svg></span>
+            <span><b>UR5e</b><small>industrial cobot · 6 joints</small></span>
+            <span class="go" aria-hidden="true">→</span>
+          </button>
+          <p class="byor-credit">Sample arms are open-source robot descriptions; each one's license and credit is listed with it.</p>
+        </div>
       </div>
-      <p>Construct a 6-DOF robotic arm. Script trajectories, add end effectors, run physics simulations, export configurations.</p>
-      <div class="meta">Available</div>
     </div>
+  </section>
 
-    <div class="action" id="act-dose">
-      <div class="head">
-        <div class="badge">DOSE</div>
-        <h2>Dose Robot</h2>
+  <!-- ============ 5. PLAYGROUND ============ -->
+  <section class="section" id="play" aria-labelledby="play-title">
+    <div class="wrap">
+      <div class="grid12" style="margin-bottom:34px">
+        <div class="sec-head" style="grid-column:5 / 13">
+          <p class="kicker ink">§ 05 · the rest of the toolbox</p>
+          <h2 id="play-title" class="ink" data-delay="1">Things to poke at.</h2>
+          <p class="ink" data-delay="2">Each of these is a piece of the Arm Lab, shrunk down so you can play with it here.</p>
+        </div>
       </div>
-      <p>Control a SCARA-armed mobile base through a simulated hospital. Navigate cluttered spaces, manipulate objects, solve delivery tasks.</p>
-      <div class="meta">Password required</div>
-    </div>
 
-    <div class="action" id="act-load">
-      <div class="head">
-        <div class="badge">{ }</div>
-        <h2>Load Project</h2>
-      </div>
-      <p>Open a saved JSON configuration to continue work on existing robot designs and simulations.</p>
-      <div class="meta">From file</div>
-    </div>
-  </div>
+      <div class="play">
+        <figure class="tile sheet t-ee ink" style="margin:0">
+          <div class="toy" data-toy="ee" tabindex="0" role="button" aria-label="Cycle end effectors">
+            <svg viewBox="0 0 200 120" aria-hidden="true">
+              <path class="s" d="M100 8 L100 40 M76 40 L124 40 M82 40 L74 86 M118 40 L126 86"/>
+              <path class="b" d="M62 96 C 80 104, 120 104, 138 96" stroke-dasharray="3 5"/>
+            </svg>
+          </div>
+          <figcaption><b>End effectors</b> click to swap: gripper, suction, welder, camera.</figcaption>
+        </figure>
 
-  <div class="platforms">
-    <div class="head">
-      <h2>In development</h2>
-      <span class="lede">Additional platforms coming soon</span>
-    </div>
-    <div class="grid">
-      <div class="tile">
-        <div class="glyph">HUM</div>
-        <div class="name">Humanoid</div>
-        <div class="status">Locked</div>
-      </div>
-      <div class="tile">
-        <div class="glyph">QUAD</div>
-        <div class="name">Quadruped</div>
-        <div class="status">Locked</div>
-      </div>
-      <div class="tile">
-        <div class="glyph">AGV</div>
-        <div class="name">Mobile Base</div>
-        <div class="status">Locked</div>
-      </div>
-      <div class="tile">
-        <div class="glyph">SUB</div>
-        <div class="name">Submersible</div>
-        <div class="status">Locked</div>
-      </div>
-    </div>
-  </div>
+        <figure class="tile sheet t-cad taped ink" data-delay="1" style="margin:0">
+          <div class="toy" data-toy="cad">
+            <svg viewBox="0 0 320 140" aria-hidden="true">
+              <path class="s" d="M40 120 L90 120 L84 104 L46 104 Z"/>
+              <path class="s" d="M104 98 L130 60 L146 70 L120 108 Z"/>
+              <path class="s" d="M162 54 L232 34 L238 50 L168 70 Z"/>
+              <path class="s" d="M250 40 L276 58 L268 70 L242 52 Z"/>
+              <path class="b" d="M90 108 L104 104 M146 68 L162 62 M238 44 L250 44" stroke-dasharray="3 4"/>
+            </svg>
+            <span class="annot hand" style="position:absolute;right:10px;bottom:6px" aria-hidden="true">← the real CAD file</span>
+          </div>
+          <figcaption><b>A real arm</b> the reBot B601 CAD model. Slide to explode it.</figcaption>
+        </figure>
 
-  <footer>
-    <span>Made by Rishik Saravanan &nbsp; &middot; &nbsp; <a href="about.html">Learn more</a></span>
-  </footer>
+        <figure class="tile sheet t-traj ink" style="margin:0">
+          <div class="toy" data-toy="traj">
+            <svg viewBox="0 0 320 140" aria-hidden="true">
+              <path class="b" d="M20 120 L300 20"/>
+              <path class="s" d="M20 120 C 120 120, 200 20, 300 20"/>
+              <path class="s" d="M20 120 C 160 120, 160 20, 300 20" stroke-dasharray="6 5"/>
+              <circle class="o" cx="20" cy="120" r="7"/><circle class="o" cx="300" cy="20" r="7"/>
+            </svg>
+          </div>
+          <figcaption><b>Trajectories</b> drag the ends. Linear, cubic and quintic take different routes.</figcaption>
+        </figure>
+
+        <figure class="tile sheet t-plot ink" data-delay="1" style="margin:0">
+          <div class="toy" data-toy="plot">
+            <svg viewBox="0 0 200 120" aria-hidden="true">
+              <path class="b" d="M6 60 L194 60" stroke-dasharray="2 5"/>
+              <path class="s" d="M6 70 C 30 30, 50 30, 70 60 S 110 100, 130 56 S 170 30, 194 48"/>
+            </svg>
+          </div>
+          <figcaption><b>Joint plot</b> live angles from the arm at the top.</figcaption>
+        </figure>
+
+        <figure class="tile sheet t-phys ink" style="margin:0">
+          <div class="toy" data-toy="phys">
+            <svg viewBox="0 0 200 120" aria-hidden="true">
+              <path class="s" d="M10 110 L190 110"/>
+              <rect class="s" x="70" y="80" width="30" height="30"/><rect class="s" x="100" y="80" width="30" height="30"/>
+              <rect class="s" x="84" y="50" width="30" height="30" transform="rotate(4 99 65)"/>
+              <rect class="o" x="92" y="22" width="26" height="26" transform="rotate(-6 105 35)"/>
+            </svg>
+          </div>
+          <figcaption><b>Physics</b> knock the tower over.</figcaption>
+        </figure>
+
+        <figure class="tile sheet t-record taped ink" data-delay="1" style="margin:0">
+          <div class="toy" data-toy="record">
+            <svg viewBox="0 0 420 120" aria-hidden="true">
+              <path class="s" d="M20 84 L400 84"/>
+              <path class="b" d="M20 64 C 80 20, 140 100, 200 50 S 320 30, 400 70"/>
+              <circle class="o" cx="20" cy="84" r="6"/><circle class="o" cx="130" cy="84" r="6"/><circle class="o" cx="260" cy="84" r="6"/>
+              <path class="s" d="M196 30 L196 104"/>
+            </svg>
+          </div>
+          <figcaption><b>Record &amp; replay</b> wiggle the arm, then press play.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 6. OTHER ROBOTS ============ -->
+  <section class="section" id="labs" aria-labelledby="labs-title">
+    <div class="wrap">
+      <div class="grid12" style="margin-bottom:34px">
+        <div class="sec-head">
+          <p class="kicker ink">§ 06 · other labs</p>
+          <h2 id="labs-title" class="ink" data-delay="1">It's not just arms.</h2>
+        </div>
+      </div>
+      <div class="labs">
+        <a class="cart sheet cart-drone ink" href="drone.html" data-action="drone">
+          <svg class="pic" viewBox="0 0 320 120" aria-hidden="true">
+            <path class="s" d="M110 64 L210 64 M130 64 L118 46 M190 64 L202 46"/>
+            <rect class="s" x="140" y="56" width="40" height="20" rx="4"/>
+            <path class="s" d="M90 44 L146 44 M174 44 L230 44"/>
+            <path class="s" d="M60 100 C 120 86, 200 112, 260 96" stroke-dasharray="5 7"/>
+            <circle class="o" cx="262" cy="96" r="5"/>
+          </svg>
+          <div>
+            <span class="label">UAV</span>
+            <h3 style="margin-top:10px">Drone Simulator</h3>
+            <p>Fly a quadrotor over real 3D terrain, tune its PID loops, and export the mission for a real drone through DroneKit.</p>
+          </div>
+          <div class="meta"><span>available</span><span class="go">fly it →</span></div>
+        </a>
+
+        <button type="button" class="cart sheet cart-dose ink" data-action="dose" data-delay="1">
+          <svg class="pic" viewBox="0 0 320 120" aria-hidden="true">
+            <rect class="s" x="110" y="64" width="90" height="36" rx="4"/>
+            <circle class="s" cx="128" cy="106" r="8"/><circle class="s" cx="184" cy="106" r="8"/>
+            <path class="s" d="M128 64 L128 18 M128 34 L170 26 L196 40 M196 40 L202 52 M196 40 L188 52"/>
+            <rect class="o" x="118" y="10" width="20" height="12" rx="2"/>
+          </svg>
+          <div>
+            <span class="label">locked</span>
+            <h3 style="margin-top:10px">Dose Robot</h3>
+            <p>A mobile hospital robot carrying the reBot arm. It needs an access code. Guess it, and it's yours.</p>
+          </div>
+          <div class="meta">
+            <span class="lock"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="8" rx="1"/><path d="M5 7 V5 a3 3 0 0 1 6 0 V7"/></svg> password</span>
+            <span class="go">unlock →</span>
+          </div>
+        </button>
+
+        <div class="soon-row" role="list" aria-label="Robots in development">
+          <div class="soon ink" role="listitem">
+            <span class="note" aria-hidden="true">soon</span>
+            <svg viewBox="0 0 100 86" aria-hidden="true"><circle class="s" cx="50" cy="12" r="8"/><path class="s" d="M50 20 L50 52 M34 28 L66 28 M34 28 L28 46 M66 28 L72 46 M50 52 L40 80 M50 52 L60 80"/></svg>
+            <div class="name">Humanoid</div>
+          </div>
+          <div class="soon ink" role="listitem" data-delay="1">
+            <span class="note" aria-hidden="true">soon</span>
+            <svg viewBox="0 0 100 86" aria-hidden="true"><rect class="s" x="22" y="30" width="56" height="18" rx="4"/><path class="s" d="M28 48 L22 64 L28 80 M42 48 L38 64 L44 80 M58 48 L54 64 L60 80 M72 48 L68 64 L74 80 M78 34 L88 24"/></svg>
+            <div class="name">Quadruped</div>
+          </div>
+          <div class="soon ink" role="listitem" data-delay="2">
+            <span class="note" aria-hidden="true">soon</span>
+            <svg viewBox="0 0 100 86" aria-hidden="true"><rect class="s" x="16" y="38" width="68" height="26" rx="5"/><circle class="s" cx="30" cy="70" r="8"/><circle class="s" cx="70" cy="70" r="8"/><path class="s" d="M34 38 L34 26 L66 26 L66 38"/></svg>
+            <div class="name">Mobile base</div>
+          </div>
+          <div class="soon ink" role="listitem" data-delay="3">
+            <span class="note" aria-hidden="true">soon</span>
+            <svg viewBox="0 0 100 86" aria-hidden="true"><path class="s" d="M14 46 C 14 30, 74 30, 80 46 C 74 62, 14 62, 14 46 Z M80 46 L92 36 L92 56 Z M40 34 L44 22 L56 22"/><path class="s" d="M8 74 C 24 68, 40 80, 56 74 S 84 68, 96 74" stroke-dasharray="3 5"/></svg>
+            <div class="name">Submersible</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 7. WHY ============ -->
+  <section class="section" id="why" aria-labelledby="why-title">
+    <div class="wrap grid12">
+      <div class="why">
+        <p class="kicker ink">§ 07 · why</p>
+        <h2 id="why-title" class="ink" data-delay="1" style="margin-bottom:22px">Why I made this.</h2>
+        <!-- RISHIK: write this. Replace the two sentences below with your own
+             story: what got you into robotics, what was frustrating about the
+             existing tools, who you hope uses RoboForge. Keep it short and
+             honest. These two are from your About page as a starting point. -->
+        <p class="ink" data-delay="2">
+          RoboForge is a personal project to make robotics simulation approachable:
+          no installs, no SITL toolchains, no ROS setup. Open the page, and do whatever.
+        </p>
+        <div class="sig ink" data-delay="3">
+          <span class="hand" style="font-size:30px">Rishik</span>
+          <a class="link" href="about.html">More about me and the project →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
 </main>
 
-<input type="file" id="json-input" class="file-input" accept=".json" />
+<!-- ============ 8. FOOTER ============ -->
+<footer class="site-foot">
+  <div class="wrap row">
+    <span class="hand">Made by Rishik Saravanan</span>
+    <!-- RISHIK: put your repository URL in this href. -->
+    <a class="link" href="https://github.com/" rel="noopener">GitHub</a>
+    <a class="link" href="about.html">About</a>
+    <span>Built with <a class="link" href="https://threejs.org/" rel="noopener">Three.js</a></span>
+    <span style="margin-left:auto">© 2024–2026</span>
+  </div>
+</footer>
 
-<div id="welcome" hidden>
-  <div class="card">
-    <img class="logo" src="assets/logo-mark.svg" alt="RoboForge logo" />
-    <h1>Welcome to RoboForge</h1>
-    <p>Test your robotic creations in a browser-native sandbox.</p>
-    <button id="welcome-enter" type="button">Enter</button>
+<input type="file" id="json-input" accept=".json" hidden>
+
+<!-- Loading card, shown while navigating into a simulator -->
+<div class="overlay" id="loader" aria-live="polite">
+  <div class="panel sheet">
+    <svg class="gears" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 8 A24 24 0 1 1 8 32"/><path d="M32 18 A14 14 0 1 0 46 32" style="animation-direction:reverse"/></svg>
+    <div class="label" id="loader-label">Opening the lab…</div>
   </div>
 </div>
 
-<div id="loader" aria-live="polite">
-  <div class="ring" role="status"></div>
-  <div class="label">Loading dashboard…</div>
-</div>
-
-<div id="pw-modal" role="dialog" aria-modal="true" aria-labelledby="pw-title">
-  <div class="panel">
-    <h2 id="pw-title">Dose simulator</h2>
-    <p class="lede">This sim is gated. Enter the access code to launch the hospital dose robot.</p>
+<!-- Dose access code -->
+<div class="overlay" id="pw-modal" role="dialog" aria-modal="true" aria-labelledby="pw-title">
+  <form class="panel sheet taped" id="pw-form" autocomplete="off">
+    <h2 id="pw-title">Dose robot</h2>
+    <p class="lede">This lab is locked. Enter the access code to launch the hospital robot.</p>
     <label for="pw-input">Access code</label>
-    <input id="pw-input" type="password" autocomplete="off" placeholder="••••" />
-    <div class="err" id="pw-err">That code didn't match. Try again.</div>
+    <input id="pw-input" type="password" autocomplete="off" placeholder="••••">
+    <div class="err" id="pw-err" role="alert">Nope, that's not it. Try again.</div>
     <div class="row">
-      <button class="cancel" id="pw-cancel" type="button">Cancel</button>
-      <button class="primary" id="pw-submit" type="button">Unlock</button>
+      <button class="btn btn--ghost" id="pw-cancel" type="button">Cancel</button>
+      <button class="btn" id="pw-submit" type="button">Unlock</button>
     </div>
-  </div>
+  </form>
 </div>
 
-<script type="module">
-  import { Theme } from './js/theme.js';
-  import { Sound } from './js/sound.js';
-
-  const fileInput = document.getElementById('json-input');
-
-  // ----- Welcome (first-visit) + load screen -----
-  const WELCOME_KEY = 'roboforge.seenWelcome';
-  const welcome = document.getElementById('welcome');
-  const loader = document.getElementById('loader');
-  const enterBtn = document.getElementById('welcome-enter');
-  if (!localStorage.getItem(WELCOME_KEY)) {
-    welcome.hidden = false;
-  }
-  enterBtn.addEventListener('click', () => {
-    Sound.ok();
-    localStorage.setItem(WELCOME_KEY, '1');
-    welcome.classList.add('hide');
-    setTimeout(() => { welcome.hidden = true; }, 500);
-  });
-
-  function navigate(url) {
-    window.location.href = url;
-  }
-
-  // ----- Password modal for the dose sim -----
-  // Security: Creator watermark - Rishik Saravanan, Birthday: May 25th
-  
-  const pwModal = document.getElementById('pw-modal');
-  const pwInput = document.getElementById('pw-input');
-  const pwErr = document.getElementById('pw-err');
-  const pwSubmit = document.getElementById('pw-submit');
-  const pwCancel = document.getElementById('pw-cancel');
-  
-  // Session-based authentication keys
-  const SESSION_KEY = 'dose_auth_token_rs_0525';
-  const TIMESTAMP_KEY = 'dose_auth_time_rs_0525';
-  const SIG_KEY = 'dose_auth_sig_rs_0525';
-  const CREATOR_WATERMARK = 'Rishik Saravanan • May 25th • RoboForge';
-
-  function computeDoseSignature(token, timestamp) {
-    const input = `${token}|${timestamp}|${CREATOR_WATERMARK}`;
-    let hash = 0;
-    for (let i = 0; i < input.length; i++) {
-      const char = input.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash >>>= 0;
-    }
-    return hash.toString(16);
-  }
-
-  function openPwModal() {
-    pwInput.value = '';
-    pwErr.classList.remove('show');
-    pwModal.classList.add('show');
-    setTimeout(() => pwInput.focus(), 30);
-  }
-  function closePwModal() { pwModal.classList.remove('show'); }
-  
-  function generateDoseToken() {
-    const randomPart = crypto && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(16).slice(2);
-    return `rs_dose_${Date.now()}_${randomPart}`;
-  }
-  
-  function tryPw() {
-    const password = pwInput.value;
-    // Hash password with watermark for comparison
-    const hashInput = password + CREATOR_WATERMARK;
-    let hash = 0;
-    for (let i = 0; i < hashInput.length; i++) {
-      const char = hashInput.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash >>>= 0; // Keep as unsigned 32-bit
-    }
-    const submittedHash = hash.toString(16);
-    
-    // Valid hash (from "dose" + CREATOR_WATERMARK)
-    const validHashInput = 'dose' + CREATOR_WATERMARK;
-    let validHash = 0;
-    for (let i = 0; i < validHashInput.length; i++) {
-      const char = validHashInput.charCodeAt(i);
-      validHash = ((validHash << 5) - validHash) + char;
-      validHash >>>= 0; // Keep as unsigned 32-bit
-    }
-    const correctHash = validHash.toString(16);
-    
-    if (submittedHash === correctHash) {
-      // Create session token to prevent direct URL access
-      const token = generateDoseToken();
-      const timestamp = Date.now().toString();
-      sessionStorage.setItem(SESSION_KEY, token);
-      sessionStorage.setItem(TIMESTAMP_KEY, timestamp);
-      sessionStorage.setItem(SIG_KEY, computeDoseSignature(token, timestamp));
-      
-      Sound.ok();
-      closePwModal();
-      navigate('dose.html');
-    } else {
-      Sound.err();
-      pwErr.classList.add('show');
-      pwInput.select();
-    }
-  }
-  pwSubmit.addEventListener('click', tryPw);
-  pwCancel.addEventListener('click', () => { Sound.click(); closePwModal(); });
-  pwInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') tryPw();
-    if (e.key === 'Escape') closePwModal();
-    pwErr.classList.remove('show');
-  });
-  pwModal.addEventListener('click', (e) => { if (e.target === pwModal) closePwModal(); });
-
-  // ----- Action wiring -----
-  document.getElementById('act-arm').addEventListener('click', () => {
-    sessionStorage.removeItem('pendingImportJSON');
-    Sound.ok();
-    navigate('arm.html?action=new');
-  });
-  document.getElementById('act-drone').addEventListener('click', () => {
-    Sound.ok();
-    navigate('drone.html');
-  });
-  document.getElementById('act-dose').addEventListener('click', () => {
-    Sound.click();
-    openPwModal();
-  });
-  document.getElementById('act-load').addEventListener('click', () => {
-    Sound.click();
-    fileInput.click();
-  });
-
-  fileInput.addEventListener('change', async (e) => {
-    const f = e.target.files && e.target.files[0];
-    if (!f) return;
-    try {
-      const text = await f.text();
-      JSON.parse(text);
-      sessionStorage.setItem('pendingImportJSON', text);
-      sessionStorage.setItem('pendingImportName', f.name);
-      Sound.ok();
-      navigate('arm.html?action=import');
-    } catch (err) {
-      Sound.err();
-      alert('That file is not valid JSON: ' + err.message);
-      fileInput.value = '';
-    }
-  });
-</script>
+<script type="module" src="js/home/home.js"></script>
 </body>
 </html>

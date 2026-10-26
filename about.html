@@ -3,137 +3,77 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RoboForge - About the Creator</title>
+<title>About RoboForge</title>
+<meta name="description" content="About RoboForge, a browser-native robotics playground built by Rishik Saravanan.">
+<meta name="theme-color" content="#f5f3f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1b2a" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="assets/logo-mark.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="site.css">
 <style>
-  :root {
-    --accent: #667eea;
-    --accent-2: #764ba2;
-    --brand-grad: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
-    --orange: #f08327;
+  .about { padding: clamp(40px, 7vw, 88px) 0 clamp(56px, 8vw, 96px); }
+  .about-head { grid-column: 1 / 8; }
+  .about-head h1 { font-size: clamp(40px, 6vw, 68px); margin-bottom: 14px; }
+  .about-logo {
+    grid-column: 9 / 13; align-self: center;
+    padding: 22px; transform: rotate(2deg);
   }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: var(--brand-grad);
-    min-height: 100vh;
-    color: #1f2330;
-  }
-  header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 28px; color: white;
-    border-bottom: 1px solid rgba(255,255,255,0.15);
-  }
-  header .brand { display: flex; align-items: center; gap: 12px; }
-  header .brand img { height: 36px; }
-  header .brand strong { font-size: 18px; letter-spacing: 0.4px; }
-  header nav a {
-    color: white; text-decoration: none; margin-left: 16px; font-size: 13px;
-    padding: 6px 12px; border-radius: 6px; background: rgba(255,255,255,0.1);
-    transition: background 0.15s;
-  }
-  header nav a:hover { background: rgba(255,255,255,0.22); }
-
-  main {
-    max-width: 880px; margin: 40px auto; padding: 0 24px 60px;
-  }
-  .hero {
-    background: white;
-    border-radius: 18px;
-    padding: 48px 40px;
-    box-shadow: 0 18px 60px rgba(0,0,0,0.22);
-    margin-bottom: 24px;
-  }
-  .hero-row {
-    display: flex; gap: 28px; align-items: center; margin-bottom: 20px;
-  }
-  .hero-row .logo-wrap {
-    width: 140px; flex-shrink: 0;
-    background: #faf6f0; border-radius: 14px;
-    padding: 12px;
-  }
-  .hero-row .logo-wrap img { width: 100%; display: block; }
-  .hero-row .text h1 { font-size: 32px; margin-bottom: 6px; }
-  .hero-row .text .tag { color: #6c7280; font-size: 14px; }
-
-  .body-section { color: #2d3340; line-height: 1.7; }
-  .body-section h2 {
-    font-size: 18px; color: var(--orange);
-    text-transform: uppercase; letter-spacing: 1.2px;
-    margin: 24px 0 8px;
-  }
-  .body-section p { margin-bottom: 12px; font-size: 15px; }
-  .body-section ul { padding-left: 22px; margin-bottom: 16px; }
-  .body-section li { margin-bottom: 4px; font-size: 14px; }
-
-  .stack-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
-  }
-  .stack-card {
-    background: #f4f6fb;
-    border: 1px solid #e3e8f0;
-    border-radius: 10px;
-    padding: 14px;
-    font-size: 13px;
-  }
-  .stack-card .label { color: #6c7280; font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
-  .stack-card .value { color: #1f2330; font-weight: 600; }
-
-  .cta {
-    text-align: center; margin-top: 28px;
-  }
-  .cta a {
-    display: inline-block;
-    background: var(--brand-grad);
-    color: white;
-    padding: 12px 28px;
-    border-radius: 10px;
-    text-decoration: none;
-    font-weight: 600;
-    box-shadow: 0 8px 22px rgba(0,0,0,0.18);
-    transition: transform 0.15s;
-  }
-  .cta a:hover { transform: translateY(-2px); }
-
-  footer {
-    text-align: center; color: rgba(255,255,255,0.75);
-    font-size: 12px; padding: 20px 0 30px;
-  }
+  .about-logo img { width: 100%; filter: var(--logo-filter); }
+  .about-body { grid-column: 1 / 9; }
+  .about-side { grid-column: 9 / 13; display: flex; flex-direction: column; gap: 22px; }
+  .about-body h2 { font-size: clamp(24px, 3vw, 32px); margin: 44px 0 12px; }
+  .about-body h2:first-child { margin-top: 8px; }
+  .about-body p { font-size: 17px; color: var(--ink-2); }
+  .about-body ul { padding-left: 20px; color: var(--ink-2); }
+  .about-body li { margin-bottom: 6px; }
+  .about-body a:not(.btn) { color: var(--ink); text-decoration-color: var(--orange); text-underline-offset: 3px; }
+  .stack { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; margin-top: 6px; }
+  .stack .sheet { padding: 14px 14px 12px; }
+  .stack .label { margin-bottom: 10px; }
+  .stack b { display: block; font: 600 16px/1.3 var(--f-display); }
+  .contact { padding: 20px; }
+  .contact h3 { margin-bottom: 10px; }
+  .contact p { font-size: 15px; margin-bottom: 6px; color: var(--ink-2); }
+  .contact a { color: var(--ink); text-decoration-color: var(--orange); text-underline-offset: 3px; word-break: break-all; }
 </style>
 </head>
 <body>
 
-<header>
-  <a href="./" class="brand" style="text-decoration:none; color:white;">
-    <img src="assets/logo-mark.svg" alt="RoboForge mark" />
-    <strong>RoboForge</strong>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <a class="brand" href="./" aria-label="RoboForge home">
+    <img src="assets/logo-mark.svg" alt="" width="38" height="30">
+    <span><b>RoboForge</b><br><small>robotics in a browser tab</small></span>
   </a>
-  <nav>
-    <a href="./">Dashboard</a>
-    <a href="about.html">About</a>
+  <nav aria-label="Main">
+    <a href="arm.html?action=new">Arm Lab</a>
+    <a href="drone.html">Drone</a>
+    <a href="about.html" aria-current="page">About</a>
   </nav>
 </header>
 
-<main>
-  <div class="hero">
-    <div class="hero-row">
-      <div class="logo-wrap">
-        <img src="assets/logo.svg" alt="RoboForge logo" />
-      </div>
-      <div class="text">
-        <h1>About RoboForge</h1>
-        <div class="tag">A browser-native robotics playground.</div>
-      </div>
+<main id="main" class="about">
+  <div class="wrap grid12">
+    <div class="about-head">
+      <p class="kicker">about</p>
+      <h1>About RoboForge</h1>
+      <p class="lede">A browser-native robotics playground.</p>
+    </div>
+    <div class="about-logo sheet taped">
+      <img src="assets/logo.svg" alt="RoboForge logo">
     </div>
 
-    <div class="body-section">
+    <div class="about-body">
       <h2>The project</h2>
       <p>
-        RoboForge is a web-based robotics simulator focused on accessibility and ease of use. 
-        Since most of the complexity of robotics software lies in the setup and configuration, 
-        RoboForge takes a different approach: it runs entirely in the browser, with no installations or 
-        dependencies required. the current simulations available are the arm and quadcopter simulations. 
-        the DOSE tab is currently under development but if you guess the password, feel free to use it. 
+        RoboForge is a web-based robotics simulator focused on accessibility and ease of use.
+        Since most of the complexity of robotics software lies in the setup and configuration,
+        RoboForge takes a different approach: it runs entirely in the browser, with no installations or
+        dependencies required. the current simulations available are the arm and quadcopter simulations.
+        the DOSE tab is currently under development but if you guess the password, feel free to use it.
       </p>
 
       <h2>The creator</h2>
@@ -141,19 +81,18 @@
         Built by <strong>Rishik Saravanan</strong>. RoboForge is a personal
         project to make robotics simulation approachable: no installs, no SITL
         toolchains, no ROS setup. Open the page, and do whatever.
-
       </p>
 
       <h2>What's inside</h2>
-      <div class="stack-grid">
-        <div class="stack-card"><div class="label">Render</div><div class="value">Three.js + WebGL2</div></div>
-        <div class="stack-card"><div class="label">Arm physics</div><div class="value">Custom rigid body + AABB stacking</div></div>
-        <div class="stack-card"><div class="label">Drone dynamics</div><div class="value">Quadrotor + cascaded PID</div></div>
-        <div class="stack-card"><div class="label">Geocoding</div><div class="value">OpenStreetMap Nominatim</div></div>
-        <div class="stack-card"><div class="label">Imagery</div><div class="value">OpenStreetMap raster tiles</div></div>
-        <div class="stack-card"><div class="label">Elevation</div><div class="value">AWS Mapzen Terrain Tiles</div></div>
-        <div class="stack-card"><div class="label">Audio</div><div class="value">WebAudio (synthesized)</div></div>
-        <div class="stack-card"><div class="label">Scripting</div><div class="value">Sandboxed JS host API</div></div>
+      <div class="stack">
+        <div class="sheet"><span class="label">Render</span><b>Three.js + WebGL2</b></div>
+        <div class="sheet"><span class="label">Arm physics</span><b>Custom rigid body + AABB stacking</b></div>
+        <div class="sheet"><span class="label">Drone dynamics</span><b>Quadrotor + cascaded PID</b></div>
+        <div class="sheet"><span class="label">Geocoding</span><b>OpenStreetMap Nominatim</b></div>
+        <div class="sheet"><span class="label">Imagery</span><b>OpenStreetMap raster tiles</b></div>
+        <div class="sheet"><span class="label">Elevation</span><b>AWS Mapzen Terrain Tiles</b></div>
+        <div class="sheet"><span class="label">Audio</span><b>WebAudio (synthesized)</b></div>
+        <div class="sheet"><span class="label">Scripting</span><b>Sandboxed JS host API</b></div>
       </div>
 
       <h2>Open data acknowledgements</h2>
@@ -166,26 +105,30 @@
 
       <h2>Drone export target</h2>
       <p>
-        Mission exports target <a href="https://dronekit-python.readthedocs.io/" style="color:var(--accent);">DroneKit-Python</a>.
+        Mission exports target <a href="https://dronekit-python.readthedocs.io/">DroneKit-Python</a>.
         Run the generated script against an ArduPilot SITL instance for safe testing,
         or against a real vehicle once you've validated the trajectory in simulation.
       </p>
 
-      <h2>Contact</h2>
-      <p>
-        <strong>Discord: <code>anti.suction</code><br/></strong>
-        Email: <a href="mailto:contact.roboforge@gmail.com?subject=RoboForge%20Contact" target="_blank" rel="noopener">contact.roboforge@gmail.com</a>
-      </p>
-
-      <div class="cta">
-        <a href="./">Back to the simulator</a>
-      </div>
+      <p style="margin-top:36px"><a class="btn" href="./">Back to the simulator <span class="arr" aria-hidden="true">→</span></a></p>
     </div>
+
+    <aside class="about-side">
+      <div class="contact sheet taped">
+        <h3>Contact</h3>
+        <p><strong>Discord:</strong> <code>anti.suction</code></p>
+        <p>Email: <a href="mailto:contact.roboforge@gmail.com?subject=RoboForge%20Contact" target="_blank" rel="noopener">contact.roboforge@gmail.com</a></p>
+      </div>
+      <div class="note">built in a browser, for a browser.</div>
+    </aside>
   </div>
 </main>
 
-<footer>
-  RoboForge &middot; built by Rishik Saravanan
+<footer class="site-foot">
+  <div class="wrap row">
+    <span class="hand">RoboForge · built by Rishik Saravanan</span>
+    <span style="margin-left:auto">Built with <a class="link" href="https://threejs.org/" rel="noopener">Three.js</a></span>
+  </div>
 </footer>
 
 </body>
