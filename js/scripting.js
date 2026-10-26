@@ -1,5 +1,3 @@
-
-
 import * as THREE from 'three';
 import { buildLinearTrajectory } from './trajectory.js';
 import { solveIK } from './ik.js';

@@ -61,7 +61,7 @@ function makeGripper() {
 
   function setOpen(v) {
     params.open = THREE.MathUtils.clamp(v, 0, 1);
-    const half = 0.02 + params.open * 0.04;
+    const half = 0.02 + params.open * 0.07;
     fLeft.position.x = -half;
     fRight.position.x = half;
   }
@@ -116,7 +116,7 @@ function makeGripper3() {
 
   function setOpen(v) {
     params.open = THREE.MathUtils.clamp(v, 0, 1);
-    const r = 0.025 + params.open * 0.035;
+    const r = 0.025 + params.open * 0.055;
     for (const f of fingers) {
       const a = f.userData.baseAngle;
       f.position.x = Math.cos(a) * r;

@@ -11,85 +11,52 @@
  */
 
 import * as THREE from 'three';
-import { DOSE_DIMS } from './dose-mesh.js';
 
-export class ScaraArm {
-  constructor(meshHandles) {
-    this.handles = meshHandles;
-    this.q1 = 0;
-    this.q2 = 0;
+/**
+ * Drives a reBot RS arm (a js/robot.js Robot instance, built with meshSet
+ * 'RS' and mounted onto the dose mobile base's lift carriage) the same way
+ * the old 2-link SCARA arm was driven: per-DOF targets that get approached
+ * at a fixed speed each frame, so keyboard input and recorded playback both
+ * move smoothly instead of snapping.
+ */
+export class RebotArm {
+  constructor(robot, handles) {
+    this.robot = robot;
+    this.handles = handles; // { liftSlide }
+    this.n = robot.joints.length;
+
+    // Whatever pose buildRSJoints() left the arm in (its "ready" pose) is
+    // "reset" for this sim, matching how the old arm re-zeroed on reset.
+    this.readyPose = robot.joints.map(j => j.value);
+    this.target = this.readyPose.slice();
+    this.jointSpeed = 1.3; // rad/s, uniform across joints
+
+    this._baseLiftY = handles.liftSlide ? handles.liftSlide.position.y : 0;
     this.lift = 0;
-    this.z  = 0;
-    this.gripper = 0;
-
-    this.targetX = 0;
-    this.targetY = 0;
-    this.targetQ1 = 0;
-    this.targetQ2 = 0;
     this.targetLift = 0;
-    this.targetZ  = 0;
-    this.targetGrip = 0;
-
-    this.q1Speed = 1.5;
-    this.q2Speed = 1.8;
     this.liftSpeed = 0.45;
-    this.zSpeed  = 0.4;
-    this.gripSpeed = 4.0;
 
-    this.elbowUp = true;
-
-    this.attached = null;
+    this.gripper = 0;
+    this.targetGrip = 0;
+    this.gripSpeed = 1.6;
   }
 
   reset() {
-    this.q1 = this.q2 = this.lift = this.z = this.gripper = 0;
-    const pose = this.toolLocalPose();
-    this.targetX = pose.x;
-    this.targetY = pose.y;
-    this.targetQ1 = this.targetQ2 = this.targetLift = this.targetZ = this.targetGrip = 0;
-    this.attached = null;
+    this.applyPose({ joints: this.readyPose, lift: 0, grip: 0 });
   }
 
-  ikLocal(x, y, z) {
-    const L1 = DOSE_DIMS.L1, L2 = DOSE_DIMS.L2;
-    const r2 = x * x + y * y;
-    const r  = Math.sqrt(r2);
-    const reachMax = L1 + L2 - 1e-3;
-    const reachMin = Math.abs(L1 - L2) + 1e-3;
-    const rClamped = THREE.MathUtils.clamp(r, reachMin, reachMax);
-
-    const sx = rClamped > 1e-6 ? x * (rClamped / r) : x;
-    const sy = rClamped > 1e-6 ? y * (rClamped / r) : y;
-
-    let cos2 = (rClamped * rClamped - L1 * L1 - L2 * L2) / (2 * L1 * L2);
-    cos2 = THREE.MathUtils.clamp(cos2, -1, 1);
-    const sign = this.elbowUp ? +1 : -1;
-    const q2 = sign * Math.acos(cos2);
-    const q1 = Math.atan2(sy, sx) - Math.atan2(L2 * Math.sin(q2), L1 + L2 * Math.cos(q2));
-
-    const zClamped = THREE.MathUtils.clamp(z, -DOSE_DIMS.zRange, 0);
-    return { q1, q2, z: zClamped };
+  nudgeJoint(i, delta) {
+    const j = this.robot.joints[i];
+    if (!j) return;
+    this.target[i] = THREE.MathUtils.clamp(this.target[i] + delta, j.min, j.max);
   }
 
-  setIKTarget(localX, localY, localZ) {
-    const sol = this.ikLocal(localX, localY, localZ);
-    this.targetX = localX;
-    this.targetY = localY;
-    this.targetQ1 = sol.q1;
-    this.targetQ2 = sol.q2;
-    this.targetZ  = sol.z;
-    return sol;
+  nudgeLift(delta, max) {
+    this.targetLift = THREE.MathUtils.clamp(this.targetLift + delta, 0, max);
   }
 
   setGripper(open01) {
     this.targetGrip = THREE.MathUtils.clamp(open01, 0, 1);
-  }
-
-  toolLocalPose() {
-    const L1 = DOSE_DIMS.L1, L2 = DOSE_DIMS.L2;
-    const x = L1 * Math.cos(this.q1) + L2 * Math.cos(this.q1 + this.q2);
-    const y = L1 * Math.sin(this.q1) + L2 * Math.sin(this.q1 + this.q2);
-    return { x, y, lift: this.lift, z: this.z };
   }
 
   step(dt) {
@@ -99,51 +66,51 @@ export class ScaraArm {
       if (Math.abs(d) <= m) return tgt;
       return cur + Math.sign(d) * m;
     };
-    this.q1 = stepTo(this.q1, this.targetQ1, this.q1Speed);
-    this.q2 = stepTo(this.q2, this.targetQ2, this.q2Speed);
+    for (let i = 0; i < this.n; i++) {
+      const j = this.robot.joints[i];
+      j.value = stepTo(j.value, this.target[i], this.jointSpeed);
+      this.robot._applyJointTransform(j);
+    }
     this.lift = stepTo(this.lift, this.targetLift, this.liftSpeed);
-    this.z  = stepTo(this.z,  this.targetZ,  this.zSpeed);
+    if (this.handles.liftSlide) this.handles.liftSlide.position.y = this._baseLiftY + this.lift;
     this.gripper = stepTo(this.gripper, this.targetGrip, this.gripSpeed);
-
-    if (this.handles.liftSlide) this.handles.liftSlide.position.y =
-      (DOSE_DIMS.wheelR + DOSE_DIMS.baseH + DOSE_DIMS.shoulderHeight) + this.lift;
-    this.handles.armYaw.rotation.y = -this.q1;
-    this.handles.elbow.rotation.y = -this.q2;
-    this.handles.zSlide.position.y = this.z;
-
-    const open = 0.012 + this.gripper * 0.022;
-    this.handles.fingerL.position.x = -open;
-    this.handles.fingerR.position.x = +open;
+    this.robot.setGripperOpen?.(this.gripper);
   }
 
   isAtTarget(tol = 0.04) {
-    return Math.abs(this.q1 - this.targetQ1) < tol &&
-           Math.abs(this.q2 - this.targetQ2) < tol &&
-           Math.abs(this.lift - this.targetLift) < 0.01 &&
-           Math.abs(this.z  - this.targetZ ) < 0.01;
+    for (let i = 0; i < this.n; i++) {
+      if (Math.abs(this.robot.joints[i].value - this.target[i]) > tol) return false;
+    }
+    return Math.abs(this.lift - this.targetLift) < 0.01;
   }
 
+  /** World-space grasp point (the last joint's tip — the RS gripper's jaws). */
   toolWorldPosition() {
-    const out = new THREE.Vector3();
-    this.handles.tool.getWorldPosition(out);
-    out.y -= 0.10;
-    return out;
+    return this.robot.getEndEffectorWorldPosition(new THREE.Vector3());
   }
 
   snapshot() {
     return {
-      q1: this.q1, q2: this.q2,
-      lift: this.lift, z: this.z,
+      joints: this.robot.joints.map(j => j.value),
+      lift: this.lift,
       grip: this.gripper,
     };
   }
 
-  applySnapshot(s) {
+  /** Set both the live pose and its target immediately (no easing) — used to
+   *  restore a recorded/scrubbed frame rather than drive toward it. */
+  applyPose(s) {
     if (!s) return;
-    this.targetQ1 = this.q1 = s.q1 ?? 0;
-    this.targetQ2 = this.q2 = s.q2 ?? 0;
-    this.targetLift = this.lift = s.lift ?? 0;
-    this.targetZ = this.z = s.z ?? 0;
-    this.targetGrip = this.gripper = s.grip ?? 0;
+    const joints = s.joints || this.readyPose;
+    for (let i = 0; i < this.n; i++) {
+      const v = joints[i] ?? this.readyPose[i] ?? 0;
+      this.target[i] = v;
+      this.robot.joints[i].value = v;
+      this.robot._applyJointTransform(this.robot.joints[i]);
+    }
+    this.lift = this.targetLift = s.lift ?? 0;
+    if (this.handles.liftSlide) this.handles.liftSlide.position.y = this._baseLiftY + this.lift;
+    this.gripper = this.targetGrip = s.grip ?? 0;
+    this.robot.setGripperOpen?.(this.gripper);
   }
 }

@@ -1,0 +1,19 @@
+{
+  "name": "rs-cad",
+  "version": "1.0.0",
+  "description": "These are the **offline** scripts that turned `assets/reBot_B601_RS_v1.0_20260625.step` into the per-link GLBs and `assets/rs/manifest.json` that ship in the app. They are *not* loaded by the browser and have no bearing on the runtime (no build step is added to RoboForge). Re-run them only when the CAD changes.",
+  "main": "convert.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@gltf-transform/core": "^4.4.1",
+    "@gltf-transform/functions": "^4.4.1",
+    "meshoptimizer": "^1.2.0",
+    "occt-import-js": "^0.0.23"
+  }
+}

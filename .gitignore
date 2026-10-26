@@ -2,3 +2,11 @@ node_modules/
 .DS_Store
 .env.local
 .env
+
+# Junk from the original zip: macOS metadata and a stale nested copy of the repo
+__MACOSX/
+._*
+/robot-arm-sim/
+
+# Converter build output (the copies the site uses live in assets/)
+tools/*/out*/

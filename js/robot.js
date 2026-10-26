@@ -8,6 +8,7 @@
  */
 
 import * as THREE from 'three';
+import { MeshLibrary } from './meshLibrary.js';
 
 export const AXIS_VECTOR = {
   x: new THREE.Vector3(1, 0, 0),
@@ -50,7 +51,7 @@ let _idCounter = 1;
 const _floorTmp = new THREE.Vector3();
 
 export class Robot {
-  constructor(scene) {
+  constructor(scene, opts = {}) {
     this.scene = scene;
     this.joints = [];
     this.endEffectors = [];
@@ -62,11 +63,99 @@ export class Robot {
 
     this.selfCollisionSlack = -0.01;
 
+    // Which geometry set dresses the kinematic chain: 'procedural' (built-in
+    // primitives) or a MeshLibrary set id such as 'RS' (real CAD). CAD geometry
+    // must be preloaded via MeshLibrary.load() BEFORE construction so that the
+    // synchronous builders can pull it; otherwise we degrade to procedural.
+    this.meshSet = opts.meshSet || 'procedural';
+
     this.rootGroup = new THREE.Group();
     this.rootGroup.name = 'robot-root';
     scene.add(this.rootGroup);
 
     this._buildBase();
+  }
+
+  /** True when a CAD mesh set is active and loaded for this robot. */
+  _cadActive() {
+    return this.meshSet && this.meshSet !== 'procedural' && MeshLibrary.isLoaded(this.meshSet);
+  }
+
+  /** Acquire the shared CAD parts [{geometry, colorKey}] for a link id, or null. */
+  _cadParts(id) {
+    if (!this._cadActive() || !id) return null;
+    return MeshLibrary.acquireLinkParts(this.meshSet, id);
+  }
+
+  /** Non-owning check: is a CAD mesh available for this link id? */
+  _cadGeometryAvailable(id) {
+    if (!this._cadActive() || !id) return false;
+    return MeshLibrary.hasLink(this.meshSet, id);
+  }
+
+  /**
+   * Build a tagged, shadowed mesh from a shared CAD geometry. The geometry is
+   * owned by MeshLibrary (userData.sharedGeometry flags it so teardown never
+   * disposes it). PBR values mirror the procedural structural parts so the CAD
+   * arm reads as the same product under the identical scene lighting.
+   */
+  _cadMesh(geometry, colorKey, jointId, isLink) {
+    const base = this.colors[colorKey] ?? DEFAULT_COLORS[colorKey] ?? 0xc9d4e0;
+    const mat = this._tagMat(new THREE.MeshStandardMaterial({
+      color: base, roughness: 0.42, metalness: 0.55,
+    }), colorKey);
+    const mesh = new THREE.Mesh(geometry, mat);
+    mesh.castShadow = mesh.receiveShadow = true;
+    mesh.userData.sharedGeometry = true;
+    if (jointId != null) mesh.userData.jointId = jointId;
+    if (isLink) mesh.userData.isLink = true;
+    return mesh;
+  }
+
+  /** Tagged mesh from geometry this Robot OWNS (procedural — safe to dispose). */
+  _procMesh(geometry, colorKey, jointId) {
+    const base = this.colors[colorKey] ?? DEFAULT_COLORS[colorKey] ?? 0xc9d4e0;
+    const mat = this._tagMat(new THREE.MeshStandardMaterial({
+      color: base, roughness: 0.42, metalness: 0.55,
+    }), colorKey);
+    const mesh = new THREE.Mesh(geometry, mat);
+    mesh.castShadow = mesh.receiveShadow = true;
+    if (jointId != null) mesh.userData.jointId = jointId;
+    mesh.userData.isLink = true;
+    return mesh;
+  }
+
+  /**
+   * Thin shell sleeves for the RS gripper. Its guide rail and drive racks run out
+   * to ±92 mm while the jaw bodies only reach ~±53 mm, so those bare ends stick
+   * into empty space and read as hanging geometry. Each sleeve is a thin closed
+   * box hugging the measured 30 x 38 mm protruding cross-section, so the rail and
+   * racks disappear into a housing instead of dangling. Cosmetic and static; the
+   * racks simply slide inside it.
+   */
+  _buildGripperShell(j) {
+    const shell = new THREE.Group();
+    shell.name = `${j.name}-shell`;
+    const X_LEN = 0.034, X_MID = -0.0555;   // measured protruding cross-section
+    const H = 0.044, T = 0.002;             // sleeve height / wall thickness
+    const Z_IN = 0.050, Z_OUT = 0.095;      // clear of the jaw bodies, out past the rail tip
+    const zLen = Z_OUT - Z_IN, zMid = (Z_OUT + Z_IN) / 2;
+    for (const s of [1, -1]) {
+      const panels = [
+        [new THREE.BoxGeometry(X_LEN, T, zLen), [X_MID,  (H - T) / 2, s * zMid]],  // top
+        [new THREE.BoxGeometry(X_LEN, T, zLen), [X_MID, -(H - T) / 2, s * zMid]],  // bottom
+        [new THREE.BoxGeometry(T, H, zLen), [X_MID + (X_LEN - T) / 2, 0, s * zMid]], // +x
+        [new THREE.BoxGeometry(T, H, zLen), [X_MID - (X_LEN - T) / 2, 0, s * zMid]], // -x
+        [new THREE.BoxGeometry(X_LEN, H, T), [X_MID, 0, s * (Z_OUT - T / 2)]],     // end cap
+      ];
+      for (const [geo, pos] of panels) {
+        const m = this._procMesh(geo, 'linkDark', j.id);
+        m.position.set(pos[0], pos[1], pos[2]);
+        shell.add(m);
+        j.partMeshes.push(m);
+      }
+    }
+    return shell;
   }
 
   _snapshotJointValues() {
@@ -133,6 +222,35 @@ export class Robot {
   }
 
 _buildBase() {
+    // --- CAD base branch ------------------------------------------------
+    const cadBaseParts = this._cadParts('base');
+    if (cadBaseParts) {
+      const baseGroup = new THREE.Group();
+      baseGroup.name = 'robot-base';
+      let main = null;
+      for (const part of cadBaseParts) {
+        const mesh = this._cadMesh(part.geometry, part.colorKey, null, false);
+        baseGroup.add(mesh);
+        if (!main || part.colorKey === 'base') main = mesh;
+      }
+      this.baseMesh = main;
+      this.baseGroup = baseGroup;
+      this.rootGroup.add(baseGroup);
+
+      const entry = MeshLibrary.baseEntry(this.meshSet);
+      this.baseTip = new THREE.Object3D();
+      this.baseTip.name = 'base-tip';
+      // Faithful build: J1's pivot is at the base's real tipOffset; older sets
+      // fall back to the AABB top.
+      if (Array.isArray(entry?.tipOffset)) {
+        this.baseTip.position.set(entry.tipOffset[0], entry.tipOffset[1], entry.tipOffset[2]);
+      } else {
+        this.baseTip.position.y = entry?.aabb ? entry.aabb[4] : 0.075;
+      }
+      this.rootGroup.add(this.baseTip);
+      return;
+    }
+    // --- procedural base ------------------------------------------------
     const baseGroup = new THREE.Group();
     baseGroup.name = 'robot-base';
 
@@ -193,6 +311,15 @@ _buildBase() {
   }
 
 _buildRevoluteHousing(j) {
+    // CAD: the motor module (RSM stator/rotor) is part of the link sub-assembly
+    // mesh, so no separate procedural housing is drawn. j.jointMesh is assigned
+    // by _buildLinkVisual for CAD arms.
+    if (this._cadGeometryAvailable(j.meshId)) {
+      const empty = new THREE.Group();
+      empty.name = `${j.name}-housing`;
+      j.housing = empty;
+      return empty;
+    }
     const grp = new THREE.Group();
     grp.name = `${j.name}-housing`;
 
@@ -239,6 +366,14 @@ _buildRevoluteHousing(j) {
 
 _buildPrismaticHousing(j) {
 
+    if (this._cadGeometryAvailable(j.meshId)) {
+      const empty = new THREE.Group();
+      empty.name = `${j.name}-housing`;
+      j.housing = empty;
+      j._barrelLen = 0.16;
+      j._barrelR = 0.045;
+      return empty;
+    }
     const grp = new THREE.Group();
     grp.name = `${j.name}-housing`;
 
@@ -292,6 +427,8 @@ _buildPrismaticHousing(j) {
   _buildPrismaticRod(j) {
     const grp = new THREE.Group();
     grp.name = `${j.name}-rod`;
+    // CAD prismatic joints carry their rod in the sub-assembly mesh already.
+    if (this._cadGeometryAvailable(j.meshId)) { j.rodGroup = grp; return grp; }
 
     const rodMat = this._tagMat(new THREE.MeshStandardMaterial({ color: 0xdcdcdc, roughness: 0.2, metalness: 0.9 }), null);
     const headMat = this._tagMat(new THREE.MeshStandardMaterial({ color: this.colors.prismaticDark, roughness: 0.45, metalness: 0.6 }), 'prismaticDark');
@@ -323,6 +460,50 @@ _buildPrismaticHousing(j) {
   }
 
 _buildLinkVisual(j) {
+    // --- CAD link branch ------------------------------------------------
+    // The whole moving sub-assembly (link structure + its motor module) is a set
+    // of baked, per-colour meshes, already in the joint-local frame pointing +Y,
+    // so they ride the articulator and rotate as one with the joint. The motor
+    // parts are tagged 'revolute' so each joint's pivot reads as a blue module.
+    const cadParts = this._cadParts(j.meshId);
+    if (cadParts) {
+      const grp = new THREE.Group();
+      grp.name = `${j.name}-link`;
+      j.partMeshes = [];
+      j.fingers = { up: [], down: [] };  // the two sliding gripper jaws, if any
+      let main = null, mainKey = null;
+      for (const part of cadParts) {
+        const mesh = this._cadMesh(part.geometry, part.colorKey, j.id, true);
+        mesh.userData.rest = mesh.position.clone();
+        if (part.role === 'fingerA' || part.role === 'fingerUp') j.fingers.up.push(mesh);
+        else if (part.role === 'fingerB' || part.role === 'fingerDown') j.fingers.down.push(mesh);
+        if (part.role === 'housing') {
+          // This joint's own motor casing was baked into its own link mesh
+          // instead of the parent's (see MeshLibrary.HOUSING_SPLIT_RADIUS);
+          // keep it on the joint's static frame so it doesn't spin along with
+          // the link it's mounted next to.
+          j.housing.add(mesh);
+          j.partMeshes.push(mesh);
+          continue;
+        }
+        grp.add(mesh);
+        j.partMeshes.push(mesh);
+        // prefer the structural mesh as the pickable "link" representative
+        if (!main || (part.colorKey === 'link' && mainKey !== 'link')) { main = mesh; mainKey = part.colorKey; }
+      }
+      j.linkMesh = main;
+      j.jointMesh = main;
+      j.linkGroup = grp;
+      if (j.fingers.up.length || j.fingers.down.length) {
+        this.gripperJoint = j;
+        grp.add(this._buildGripperShell(j));   // close off the open mechanism bay
+      }
+      // Faithful CAD meshes are baked in real orientation; no linkAxis unfold.
+      const axisName = j.link.axis || '+y';
+      grp.quaternion.copy(LINK_AXIS_QUAT[axisName] || LINK_AXIS_QUAT['+y']);
+      return grp;
+    }
+    // --- procedural link ------------------------------------------------
     const grp = new THREE.Group();
     grp.name = `${j.name}-link`;
 
@@ -410,6 +591,13 @@ addJoint(opts = {}) {
       id: _idCounter++,
       name: `${type === 'revolute' ? 'J' : 'P'}${this.joints.length + 1}`,
       type, axis,
+      meshId: opts.meshId ?? null,   // CAD link id in the active mesh set, if any
+      // Faithful-CAD kinematics: an arbitrary unit rotation axis and an arbitrary
+      // offset to the next joint (both in the joint's local frame). When present
+      // they override the cardinal axis + linkAxis·linkLength layout, so the arm
+      // keeps its real CAD shape instead of a straight +Y stack.
+      axisVec: Array.isArray(opts.axisVec) ? new THREE.Vector3(opts.axisVec[0], opts.axisVec[1], opts.axisVec[2]).normalize() : null,
+      tipOffset: Array.isArray(opts.tipOffset) ? new THREE.Vector3(opts.tipOffset[0], opts.tipOffset[1], opts.tipOffset[2]) : null,
       value: 0,
       min: opts.min ?? (type === 'revolute' ? -Math.PI : -0.4),
       max: opts.max ?? (type === 'revolute' ? Math.PI : 0.4),
@@ -442,8 +630,12 @@ addJoint(opts = {}) {
 
     j.tip = new THREE.Object3D();
     j.tip.name = `${j.name}-tip`;
-    const tipDir = LINK_AXIS_VECTOR[linkAxis] || LINK_AXIS_VECTOR['+y'];
-    j.tip.position.copy(tipDir).multiplyScalar(linkLength);
+    if (j.tipOffset) {
+      j.tip.position.copy(j.tipOffset);
+    } else {
+      const tipDir = LINK_AXIS_VECTOR[linkAxis] || LINK_AXIS_VECTOR['+y'];
+      j.tip.position.copy(tipDir).multiplyScalar(linkLength);
+    }
     j.articulator.add(j.tip);
 
     j.axesHelper = new THREE.AxesHelper(0.13);
@@ -490,13 +682,16 @@ addJoint(opts = {}) {
   }
 
   _disposeJoint(j) {
+    // Dispose meshes AND line/points objects (e.g. the joint AxesHelper), so no
+    // GPU geometry leaks when joints are torn down (model switches, clear()).
     j.group.traverse(o => {
-      if (o.isMesh) {
-        o.geometry?.dispose?.();
-        if (Array.isArray(o.material)) o.material.forEach(m => m.dispose?.());
-        else o.material?.dispose?.();
-      }
+      if (o.geometry && !o.userData.sharedGeometry) o.geometry.dispose?.();
+      if (Array.isArray(o.material)) o.material.forEach(m => m.dispose?.());
+      else o.material?.dispose?.();
     });
+    if (j.meshId && this.meshSet && this.meshSet !== 'procedural' && !j.procGripper) {
+      MeshLibrary.releaseLink(this.meshSet, j.meshId);
+    }
   }
 
 setJointValue(index, value) {
@@ -528,7 +723,7 @@ setJointValue(index, value) {
   }
 
   _applyJointTransform(j) {
-    const a = AXIS_VECTOR[j.axis];
+    const a = j.axisVec || AXIS_VECTOR[j.axis];
     if (j.type === 'revolute') {
       j.articulator.position.set(0, 0, 0);
       j.articulator.quaternion.setFromAxisAngle(a, j.value);
@@ -552,16 +747,21 @@ setJointValue(index, value) {
   }
 
 rebuildJointGeometry(j) {
+    // Release the shared CAD geometry this joint currently holds; the rebuild
+    // re-acquires it. Never dispose a shared (library-owned) geometry here.
+    if (j.meshId && this.meshSet && this.meshSet !== 'procedural' && !j.procGripper) {
+      MeshLibrary.releaseLink(this.meshSet, j.meshId);
+    }
     if (j.housing) {
       j.group.remove(j.housing);
       j.housing.traverse(o => {
-        if (o.isMesh) { o.geometry?.dispose?.(); o.material?.dispose?.(); }
+        if (o.isMesh) { if (!o.userData.sharedGeometry) o.geometry?.dispose?.(); o.material?.dispose?.(); }
       });
     }
     if (j.linkGroup) {
       j.articulator.remove(j.linkGroup);
       j.linkGroup.traverse(o => {
-        if (o.isMesh) { o.geometry?.dispose?.(); o.material?.dispose?.(); }
+        if (o.isMesh) { if (!o.userData.sharedGeometry) o.geometry?.dispose?.(); o.material?.dispose?.(); }
       });
     }
 
@@ -583,11 +783,37 @@ rebuildJointGeometry(j) {
 
     const linkGrp = this._buildLinkVisual(j);
     j.articulator.add(linkGrp);
-    const tipDir2 = LINK_AXIS_VECTOR[j.link.axis || '+y'] || LINK_AXIS_VECTOR['+y'];
-    j.tip.position.copy(tipDir2).multiplyScalar(j.link.length);
+    if (j.tipOffset) {
+      j.tip.position.copy(j.tipOffset);
+    } else {
+      const tipDir2 = LINK_AXIS_VECTOR[j.link.axis || '+y'] || LINK_AXIS_VECTOR['+y'];
+      j.tip.position.copy(tipDir2).multiplyScalar(j.link.length);
+    }
 
     this._applyJointTransform(j);
   }
+
+  /** Slide the CAD gripper's jaws apart along their local Z rail. t in [0,1].
+   *  At t=0 the jaws are pressed together (mated); at t=1 they open by `travel`. */
+  /**
+   * Open/close the gripper. t in [0,1]: 0 = jaws closed flush, 1 = fully open.
+   * Each jaw group's origin IS its gripping face, so the faces end up exactly
+   * 2·d apart — there is no gap to tune away.
+   */
+  setGripperOpen(t) {
+    this.gripperOpen = clamp(t ?? 0, 0, 1);
+    const j = this.gripperJoint;
+    if (!j || !j.fingers) return false;
+    const closeInset = 0.006; // metres each jaw presses past rest to mate when closed
+    const travel = 0.03;      // metres each jaw slides from closed to fully open (jaw tip
+                               // stays inside the ±92mm rail housing at full travel)
+    const dz = -closeInset + this.gripperOpen * (travel + closeInset);
+    for (const m of j.fingers.up)   m.position.z = (m.userData.rest?.z ?? 0) + dz;
+    for (const m of j.fingers.down) m.position.z = (m.userData.rest?.z ?? 0) - dz;
+    return true;
+  }
+
+  hasGripper() { return !!this.gripperJoint; }
 
   setShowAxes(v) {
     this.showAxes = v;
@@ -651,8 +877,11 @@ jointFromObject(obj) {
   pickableObjects() {
     const arr = [];
     for (const j of this.joints) {
-      if (j.jointMesh) arr.push(j.jointMesh);
-      if (j.linkMesh) arr.push(j.linkMesh);
+      if (j.partMeshes && j.partMeshes.length) arr.push(...j.partMeshes);
+      else {
+        if (j.jointMesh) arr.push(j.jointMesh);
+        if (j.linkMesh) arr.push(j.linkMesh);
+      }
     }
     for (const ee of this.endEffectors) {
       if (ee.pickables) arr.push(...ee.pickables);

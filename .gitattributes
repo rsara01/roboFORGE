@@ -1,0 +1,5 @@
+# CAD sources: store byte-for-byte, never rewrite line endings
+*.step -text
+*.stp -text
+*.stl binary
+*.glb binary

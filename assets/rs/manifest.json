@@ -1,0 +1,343 @@
+{
+  "name": "RS",
+  "source": "reBot_B601_RS_v1.0_20260625.step",
+  "units": "m",
+  "upAxis": "Y",
+  "frame": "real",
+  "note": "FAITHFUL build: links baked in real CAD orientation (no unfold). Per-joint axis + parentOffset + tipOffset drive robot.js. Material name = \"colorKey|role\"; role fingerUp/fingerDown are the sliding jaws.",
+  "links": [
+    {
+      "id": "base",
+      "file": "rs_base.glb",
+      "tris": 41427,
+      "axis": null,
+      "parentOffset": [
+        0,
+        0,
+        0
+      ],
+      "tipOffset": [
+        0,
+        0.075,
+        0
+      ],
+      "collisionRadius": 0.065,
+      "min": null,
+      "max": null,
+      "parts": [
+        {
+          "colorKey": "base",
+          "role": "static",
+          "tris": 28443
+        },
+        {
+          "colorKey": "revolute",
+          "role": "static",
+          "tris": 12984
+        }
+      ],
+      "aabb": [
+        -0.07,
+        0,
+        -0.1,
+        0.07,
+        0.075,
+        0.1
+      ]
+    },
+    {
+      "id": "j1",
+      "file": "rs_j1.glb",
+      "tris": 18366,
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "parentOffset": [
+        0,
+        0.075,
+        0
+      ],
+      "tipOffset": [
+        -0.02,
+        0.07,
+        -0.008
+      ],
+      "collisionRadius": 0.03,
+      "min": -3.14,
+      "max": 3.14,
+      "parts": [
+        {
+          "colorKey": "revolute",
+          "role": "static",
+          "tris": 5132
+        },
+        {
+          "colorKey": "link",
+          "role": "static",
+          "tris": 13234
+        }
+      ],
+      "aabb": [
+        -0.0472,
+        -0.0104,
+        -0.0433,
+        0.039,
+        0.0974,
+        0.0433
+      ]
+    },
+    {
+      "id": "j2",
+      "file": "rs_j2.glb",
+      "tris": 76858,
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "parentOffset": [
+        -0.02,
+        0.07,
+        -0.008
+      ],
+      "tipOffset": [
+        0.236,
+        0,
+        0.008
+      ],
+      "collisionRadius": 0.031,
+      "min": -2.3,
+      "max": 2.3,
+      "parts": [
+        {
+          "colorKey": "revolute",
+          "role": "static",
+          "tris": 35163
+        },
+        {
+          "colorKey": "link",
+          "role": "static",
+          "tris": 41695
+        }
+      ],
+      "aabb": [
+        -0.0469,
+        -0.0441,
+        -0.0313,
+        0.2796,
+        0.0441,
+        0.0473
+      ]
+    },
+    {
+      "id": "j3",
+      "file": "rs_j3.glb",
+      "tris": 96521,
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "parentOffset": [
+        0.236,
+        0,
+        0.008
+      ],
+      "tipOffset": [
+        -0.228,
+        0.0727,
+        0
+      ],
+      "collisionRadius": 0.033,
+      "min": -2.3,
+      "max": 2.3,
+      "parts": [
+        {
+          "colorKey": "revolute",
+          "role": "module",
+          "tris": 47859
+        },
+        {
+          "colorKey": "link",
+          "role": "static",
+          "tris": 35064
+        },
+        {
+          "colorKey": "revolute",
+          "role": "static",
+          "tris": 13598
+        }
+      ],
+      "aabb": [
+        -0.269,
+        -0.0248,
+        -0.0433,
+        0.0248,
+        0.1042,
+        0.0433
+      ]
+    },
+    {
+      "id": "j4",
+      "file": "rs_j4.glb",
+      "tris": 70019,
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "parentOffset": [
+        -0.228,
+        0.0727,
+        0
+      ],
+      "tipOffset": [
+        -0.087,
+        0,
+        0
+      ],
+      "collisionRadius": 0.019,
+      "min": -2.3,
+      "max": 2.3,
+      "parts": [
+        {
+          "colorKey": "revolute",
+          "role": "static",
+          "tris": 13552
+        },
+        {
+          "colorKey": "link",
+          "role": "static",
+          "tris": 8608
+        },
+        {
+          "colorKey": "revolute",
+          "role": "module",
+          "tris": 47859
+        }
+      ],
+      "aabb": [
+        -0.128,
+        -0.0282,
+        -0.0433,
+        0.0283,
+        0.103,
+        0.0433
+      ]
+    },
+    {
+      "id": "j5",
+      "file": "rs_j5.glb",
+      "tris": 58989,
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "parentOffset": [
+        -0.087,
+        0,
+        0
+      ],
+      "tipOffset": [
+        -0.059,
+        0,
+        0
+      ],
+      "collisionRadius": 0.018,
+      "min": -2.3,
+      "max": 2.3,
+      "parts": [
+        {
+          "colorKey": "revolute",
+          "role": "module",
+          "tris": 47859
+        },
+        {
+          "colorKey": "revolute",
+          "role": "static",
+          "tris": 11130
+        }
+      ],
+      "aabb": [
+        -0.0365,
+        -0.0525,
+        -0.041,
+        0.0515,
+        0.0512,
+        0.0409
+      ]
+    },
+    {
+      "id": "j6",
+      "file": "rs_j6.glb",
+      "tris": 90505,
+      "axis": [
+        -1,
+        0,
+        0
+      ],
+      "parentOffset": [
+        -0.059,
+        0,
+        0
+      ],
+      "tipOffset": [
+        -0.12934,
+        0,
+        0
+      ],
+      "collisionRadius": 0.017,
+      "min": -2.3,
+      "max": 2.3,
+      "parts": [
+        {
+          "colorKey": "revolute",
+          "role": "static",
+          "tris": 18554
+        },
+        {
+          "colorKey": "bolt",
+          "role": "fingerB",
+          "tris": 152
+        },
+        {
+          "colorKey": "bolt",
+          "role": "fingerA",
+          "tris": 152
+        },
+        {
+          "colorKey": "linkDark",
+          "role": "static",
+          "tris": 5688
+        },
+        {
+          "colorKey": "link",
+          "role": "fingerA",
+          "tris": 9050
+        },
+        {
+          "colorKey": "revolute",
+          "role": "module",
+          "tris": 47859
+        },
+        {
+          "colorKey": "link",
+          "role": "fingerB",
+          "tris": 9050
+        }
+      ],
+      "aabb": [
+        -0.1437,
+        -0.0409,
+        -0.092,
+        0.023,
+        0.0409,
+        0.092
+      ]
+    }
+  ],
+  "totalTris": 452685
+}

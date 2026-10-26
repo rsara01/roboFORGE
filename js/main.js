@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import { createScene } from './scene.js';
 import { Robot } from './robot.js';
 import { createEndEffector } from './endEffectors.js';
-import { solveIK, IKTracker } from './ik.js';
+import { solveIK, solveIKAvoidingCollisions, IKTracker } from './ik.js';
 import { ScriptRunner } from './scripting.js';
 import { JointPlot } from './plot.js';
 import { MiniPhysics } from './physics.js';
@@ -25,9 +25,25 @@ import { Theme } from './theme.js';
 import { Loading } from './loading.js';
 import {
   robotToJSON, jsonToRobot,
-  robotToURDF, urdfToRobot,
+  robotToURDF, urdfToRobot, urdfModel,
   downloadText, readFileAsText,
 } from './persistence.js';
+import { MeshLibrary } from './meshLibrary.js';
+
+// Default "ready" joint angles for the RS arm (radians, J1..J6). The CAD ships
+// folded; this opens it to a natural presentation pose. Tuned in the viewer.
+// Natural "ready" pose: shoulder up, elbow bent, J4 pitch angles the gripper down.
+const RS_READY_POSE = [0, 1.0, -1.4, 0.6, 0, 0];
+
+// Green-and-black colour scheme for the RS arm: green structural links, black
+// motors / base / gripper. Applied per-robot so the procedural arm is untouched.
+const RS_COLORS = {
+  link: 0x2ea043,       // structural links — green
+  revolute: 0x18191b,   // motor modules — black
+  base: 0x131416,       // pedestal — black
+  linkDark: 0x232427,   // gripper mechanism — near-black
+  bolt: 0x0e0f10,
+};
 
 document.body.classList.add('app-loaded');
 
@@ -335,6 +351,33 @@ function initArmRecordingUI() {
   });
 }
 
+function initModelUI() {
+  const sel = document.getElementById('model-select');
+  const importBtn = document.getElementById('btn-import-cad');
+  const fileInput = document.getElementById('cad-file-input');
+  if (sel) {
+    sel.value = app.model;
+    sel.addEventListener('change', () => { app.setModel(sel.value); });
+  }
+  if (importBtn && fileInput) {
+    importBtn.addEventListener('click', () => { fileInput.value = ''; fileInput.click(); });
+    fileInput.addEventListener('change', (e) => {
+      const f = e.target.files[0];
+      if (f) app.importCADFile(f);
+    });
+  }
+  const gripSlider = document.getElementById('gripper-open');
+  const gripVal = document.getElementById('gripper-open-val');
+  if (gripSlider) {
+    gripSlider.addEventListener('input', () => {
+      const t = parseFloat(gripSlider.value);
+      robot.setGripperOpen?.(t);
+      if (gripVal) gripVal.textContent = Math.round(t * 100) + '%';
+    });
+  }
+  app._syncModelUI();
+}
+
 const traceState = {
   enabled: false,
   points: [],
@@ -359,6 +402,7 @@ const ikTarget = (() => {
 })();
 
 const ikTracker = new IKTracker(robot);
+const ikSolutions = { poses: [], index: 0 };
 
 const simClock = {
   now() { return sim.time; },
@@ -482,12 +526,17 @@ transform.attach(j.articulator);
   refreshUI() { ui.refreshAll(); },
 
   spawnRobot(opts = {}) {
-    const r = new Robot(scene);
+    // Inherit the active robot's model so spawning while RS is active yields
+    // another RS arm (the set is already loaded, so this stays synchronous).
+    const meshSet = opts.meshSet
+      || (MeshLibrary.isLoaded(this.model) && this.model !== 'procedural' ? this.model : 'procedural');
+    const r = new Robot(scene, { meshSet });
 
     const idx = robots.length;
     r.rootGroup.position.x = opts.x ?? (idx * 1.4);
     if (opts.z != null) r.rootGroup.position.z = opts.z;
     robots.push(r);
+    if (meshSet !== 'procedural') this.buildRSModel(r);
     this.setActiveRobot(robots.length - 1);
     return r;
   },
@@ -565,6 +614,222 @@ loadPreset(name) {
     this.refreshUI();
   },
 
+  // ---- CAD model management -------------------------------------------
+  get model() {
+    const r = robots[activeRobotIdx];
+    return r && r.meshSet && r.meshSet !== 'procedural' ? r.meshSet : 'procedural';
+  },
+
+  /** Dispose a robot's base visuals (joints are freed via robot.clear()). */
+  _disposeRobotVisuals(r) {
+    r.rootGroup.traverse(o => {
+      if (o.geometry && !o.userData.sharedGeometry) o.geometry.dispose?.();
+      if (Array.isArray(o.material)) o.material.forEach(m => m.dispose?.());
+      else o.material?.dispose?.();
+    });
+  },
+
+  /** Replace robots[idx] with a fresh Robot built for `wantSet`, same pose. */
+  _swapMeshSet(idx, wantSet, keepColors = true) {
+    const old = robots[idx];
+    const pos = old.rootGroup.position.clone();
+    const colors = { ...old.colors };
+    old.clear();
+    scene.remove(old.rootGroup);
+    this._disposeRobotVisuals(old);
+    const r = new Robot(scene, { meshSet: wantSet });
+    r.rootGroup.position.copy(pos);
+    if (keepColors) for (const [k, v] of Object.entries(colors)) {
+      if (typeof v === 'number') r.setColor(k, v);
+    }
+    robots[idx] = r;
+    return r;
+  },
+
+  /** Build the RS arm's 6 joints from the loaded manifest. */
+  buildRSModel(r) {
+    r.clear();
+    const cardinal = v => { const ax = ['x', 'y', 'z']; let bi = 0; for (let i = 1; i < 3; i++) if (Math.abs(v[i]) > Math.abs(v[bi])) bi = i; return ax[bi]; };
+    for (const e of MeshLibrary.jointEntries('RS')) {
+      r.addJoint({
+        type: 'revolute',
+        axis: Array.isArray(e.axis) ? cardinal(e.axis) : (e.jointAxis || 'y'),  // display/torque label
+        axisVec: Array.isArray(e.axis) ? e.axis : null,       // real motor axis (faithful build)
+        tipOffset: Array.isArray(e.tipOffset) ? e.tipOffset : null,
+        linkLength: e.linkLength ?? 0.1,
+        linkRadius: e.collisionRadius ?? 0.05,
+        linkAxis: e.linkAxis || '+y',
+        min: e.min ?? -Math.PI,
+        max: e.max ?? Math.PI,
+        meshId: e.id,
+      });
+    }
+    // Green-and-black scheme (per-robot; procedural arm keeps its own colours).
+    for (const [k, v] of Object.entries(RS_COLORS)) r.setColor(k, v);
+    // reBot RS ships folded; open to a natural "ready" pose so it reads assembled.
+    if (RS_READY_POSE.length === r.joints.length) {
+      RS_READY_POSE.forEach((v, i) => { r.joints[i].value = v; r._applyJointTransform(r.joints[i]); });
+    }
+    r.setGripperOpen?.(0);   // start closed/mated; open via the Gripper slider
+  },
+
+  /** Switch the active robot between 'procedural' and a CAD set like 'RS'. */
+  async setModel(model) {
+    const want = model === 'procedural' ? 'procedural' : model;
+    if (this.model === want) return;
+    if (want !== 'procedural') {
+      Loading.show(`Loading ${want} CAD model…`);
+      try {
+        await MeshLibrary.load(want);
+      } catch (err) {
+        Loading.hide();
+        console.warn('[RoboForge] CAD load failed:', err);
+        alert(`Could not load ${want} CAD assets:\n${err.message}\n\nStaying on procedural geometry.`);
+        this._syncModelUI();
+        return;
+      }
+      Loading.hide(200);
+    }
+    const idx = activeRobotIdx;
+    const vals = robots[idx].joints.map(j => j.value);
+    const eeSpecs = robots[idx].endEffectors.map(ee => ({ type: ee.type, params: { ...ee.params } }));
+    const r = this._swapMeshSet(idx, want);
+    if (want === 'procedural') this.loadPresetInto(r, '6dof');
+    else this.buildRSModel(r);
+    // Carry the previous pose across the switch only if it was a real pose; a
+    // fresh (all-zero) arm keeps the model's own default (RS's ready pose).
+    const nontrivial = vals.some(v => Math.abs(v) > 1e-3);
+    if (nontrivial && vals.length === r.joints.length) vals.forEach((v, i) => r.setJointValue(i, v));
+    this._restoreEEs(r, eeSpecs);
+    this.setActiveRobot(idx);
+    this.onSelect(null);
+    this.refreshUI();
+    this._syncModelUI();
+    this._frameActiveRobot();
+  },
+
+  loadPresetInto(r, name) {
+    const prev = activeRobotIdx;
+    const i = robots.indexOf(r);
+    if (i >= 0) activeRobotIdx = i;
+    try { this.loadPreset(name); } finally { activeRobotIdx = prev; }
+  },
+
+  _restoreEEs(r, eeSpecs) {
+    for (const spec of eeSpecs) {
+      const ee = createEndEffector(spec.type);
+      if (!ee) continue;
+      if (spec.params) for (const [k, v] of Object.entries(spec.params)) ee.setParam?.(k, v);
+      r.addEndEffector(ee);
+    }
+  },
+
+  /** CAD-aware JSON load: preload the file's model, swap meshSet, then apply. */
+  async loadRobotData(data, makeEE) {
+    const model = data && data.model && data.model !== 'procedural' ? data.model : null;
+    let wantSet = 'procedural';
+    if (model) {
+      try { await MeshLibrary.load(model); wantSet = model; }
+      catch (err) { console.warn('[RoboForge] CAD load failed, procedural fallback:', err); }
+    }
+    const idx = activeRobotIdx;
+    if ((robots[idx].meshSet || 'procedural') !== wantSet) {
+      this._swapMeshSet(idx, wantSet, false);
+      this.setActiveRobot(idx);
+    }
+    jsonToRobot(robots[idx], data, makeEE);
+    this._syncModelUI();
+  },
+
+  /** CAD-aware URDF load. */
+  async loadURDFData(text, makeEE) {
+    const model = urdfModel(text);
+    let wantSet = 'procedural';
+    if (model) {
+      try { await MeshLibrary.load(model); wantSet = model; }
+      catch (err) { console.warn('[RoboForge] CAD load failed, procedural fallback:', err); }
+    }
+    const idx = activeRobotIdx;
+    if ((robots[idx].meshSet || 'procedural') !== wantSet) {
+      this._swapMeshSet(idx, wantSet, false);
+      this.setActiveRobot(idx);
+    }
+    urdfToRobot(robots[idx], text, makeEE);
+    this._syncModelUI();
+  },
+
+  /** Import a user CAD file as a static shaded prop parented to the scene. */
+  async importCADFile(file) {
+    Loading.show('Importing CAD…');
+    try {
+      const { geometry, name } = await MeshLibrary.importFile(file);
+      geometry.computeBoundingBox();
+      const size = new THREE.Vector3();
+      geometry.boundingBox.getSize(size);
+      // rescale oversized imports (e.g. raw mm STL) into a ~0.4 m envelope
+      const maxDim = Math.max(size.x, size.y, size.z) || 1;
+      const s = maxDim > 4 ? 0.001 : (maxDim > 1.5 ? 0.4 / maxDim : 1);
+      const mat = new THREE.MeshStandardMaterial({ color: 0x9fb0c4, roughness: 0.45, metalness: 0.5 });
+      const mesh = new THREE.Mesh(geometry, mat);
+      mesh.scale.setScalar(s);
+      mesh.castShadow = mesh.receiveShadow = true;
+      mesh.name = `imported:${name}`;
+      geometry.computeBoundingBox();
+      mesh.position.set(1.2, -geometry.boundingBox.min.y * s, 0);
+      scene.add(mesh);
+      this._importedProps = this._importedProps || [];
+      this._importedProps.push(mesh);
+      Loading.hide(150);
+      this._setModelStatus(`Imported ${name} (static prop).`);
+    } catch (err) {
+      Loading.hide();
+      console.warn('[RoboForge] CAD import failed:', err);
+      alert(`Could not import "${file.name}":\n${err.message}`);
+    }
+  },
+
+  _frameActiveRobot() {
+    const box = new THREE.Box3();
+    robot.rootGroup.updateWorldMatrix(true, true);
+    box.setFromObject(robot.rootGroup);
+    if (!isFinite(box.min.x) || box.isEmpty()) return;
+    const center = new THREE.Vector3();
+    const size = new THREE.Vector3();
+    box.getCenter(center);
+    box.getSize(size);
+    const radius = Math.max(size.x, size.y, size.z) * 0.9 + 0.4;
+    orbit.target.copy(center);
+    camera.position.set(center.x + radius, center.y + radius * 0.6, center.z + radius);
+    camera.lookAt(center);
+    orbit.update();
+  },
+
+  _setModelStatus(msg) {
+    const el = document.getElementById('model-status');
+    if (el) el.textContent = msg;
+  },
+
+  _syncModelUI() {
+    const sel = document.getElementById('model-select');
+    if (sel) sel.value = this.model;
+    this._setModelStatus(this.model === 'procedural'
+      ? 'Procedural primitives.'
+      : `${this.model} CAD — ${robot.joints.length} joints, ${MeshLibrary.getManifest(this.model)?.totalTris ?? '?'} tris.`);
+    // Gripper control appears only when the active arm has an articulated gripper.
+    const gripRow = document.getElementById('gripper-row');
+    if (gripRow) {
+      const has = robot.hasGripper?.();
+      gripRow.style.display = has ? '' : 'none';
+      if (has) {
+        const s = document.getElementById('gripper-open');
+        const v = document.getElementById('gripper-open-val');
+        const t = robot.gripperOpen ?? 0.6;
+        if (s) s.value = t;
+        if (v) v.textContent = Math.round(t * 100) + '%';
+      }
+    }
+  },
+
 setEndEffector(type) {
     if (type === 'none') {
       robot.detachAllEndEffectors();
@@ -621,11 +886,25 @@ setTraceEnabled(v) {
 
 ikSolveOnce() {
     const t = this._ikTargetVec3();
-    const r = solveIK(robot, t, {
+    const r = solveIKAvoidingCollisions(robot, t, {
       maxIter: parseInt(document.getElementById('ik-iter').value) || 20,
       tolerance: parseFloat(document.getElementById('ik-tol').value) || 0.005,
     });
-    scriptRunner.log(`[ik] err=${r.error.toFixed(4)} iters=${r.iterations} ${r.converged ? 'OK' : 'no-conv'}`);
+    ikSolutions.poses = r.alternates || [];
+    ikSolutions.index = 0;
+    const note = r.selfCollisionAvoided ? ' (picked a different combination to avoid self-collision)' : '';
+    const altNote = ikSolutions.poses.length > 1 ? ` — ${ikSolutions.poses.length} combinations available, use Cycle Solution` : '';
+    scriptRunner.log(`[ik] err=${r.error.toFixed(4)} iters=${r.iterations} ${r.converged ? 'OK' : 'no-conv'}${note}${altNote}`);
+    ui.refreshSliders();
+  },
+  ikCycleSolution() {
+    if (ikSolutions.poses.length < 2) {
+      scriptRunner.log('[ik] only one clean combination found for this target — nothing to cycle to.');
+      return;
+    }
+    ikSolutions.index = (ikSolutions.index + 1) % ikSolutions.poses.length;
+    robot.setAllJoints(ikSolutions.poses[ikSolutions.index]);
+    scriptRunner.log(`[ik] combination ${ikSolutions.index + 1}/${ikSolutions.poses.length}`);
     ui.refreshSliders();
   },
   ikStartTracking() {
@@ -677,12 +956,13 @@ saveJSON() {
       try {
         const text = await readFileAsText(f);
         let info = { fileName: f.name, joints: 0, endEffectors: 0 };
+        const makeEE = (t) => { const ee = createEndEffector(t); if (ee) robot.addEndEffector(ee); return ee; };
         if (kind === 'urdf' || /\.urdf|\.xml/i.test(f.name)) {
-          urdfToRobot(robot, text, (t) => { const ee = createEndEffector(t); if (ee) robot.addEndEffector(ee); return ee; });
+          await this.loadURDFData(text, makeEE);
           info = { ...info, type: 'URDF' };
         } else {
           const data = JSON.parse(text);
-          jsonToRobot(robot, data, (t) => { const ee = createEndEffector(t); if (ee) robot.addEndEffector(ee); return ee; });
+          await this.loadRobotData(data, makeEE);
           info = {
             ...info,
             type: 'JSON',
@@ -775,9 +1055,7 @@ async function bootInitialContent() {
     if (text) {
       try {
         const data = JSON.parse(text);
-        const { jsonToRobot } = await import('./persistence.js');
-        robot.clear();
-        jsonToRobot(robot, data, (t) => { const ee = createEndEffector(t); if (ee) robot.addEndEffector(ee); return ee; });
+        await app.loadRobotData(data, (t) => { const ee = createEndEffector(t); if (ee) robot.addEndEffector(ee); return ee; });
         app.onSelect(null);
         return;
       } catch (err) {
@@ -797,6 +1075,7 @@ try {
   await bootInitialContent();
   ui.refreshAll();
   initArmRecordingUI();
+  initModelUI();
   Loading.hide(250);
 } catch (err) {
   Loading.hide();

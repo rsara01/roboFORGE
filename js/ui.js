@@ -250,6 +250,7 @@ export class UI {
     document.getElementById('ik-solve').addEventListener('click', () => ctx.ikSolveOnce());
     document.getElementById('ik-track').addEventListener('click', () => ctx.ikStartTracking());
     document.getElementById('ik-stop').addEventListener('click', () => ctx.ikStopTracking());
+    document.getElementById('ik-cycle').addEventListener('click', () => ctx.ikCycleSolution());
     document.getElementById('ik-show-target').addEventListener('change', (e) => {
       ctx.setIKTargetVisible(e.target.checked);
     });

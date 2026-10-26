@@ -112,6 +112,90 @@ function _solvePrismatic(j, robot, target) {
   }
 }
 
+/** True if every joint value in a/b is within `eps` radians/metres of the other. */
+function _posesClose(a, b, eps = 0.05) {
+  for (let i = 0; i < a.length; i++) {
+    if (Math.abs(a[i] - b[i]) > eps) return false;
+  }
+  return true;
+}
+
+/**
+ * Solve IK like solveIK(), but guard against the arm folding into itself.
+ * CCD is a local solver — it only ever finds the one configuration reachable
+ * by nudging joints from wherever they currently sit. If that configuration
+ * self-collides (or sinks through the floor), re-seed the joints to a
+ * different starting combination (zero pose, mirrored pose, several random
+ * poses) and re-run CCD from there, keeping every seed that reaches the
+ * target cleanly. Returns the best clean result plus every other clean
+ * alternative found, so the caller can cycle between them.
+ */
+export function solveIKAvoidingCollisions(robot, target, options = {}) {
+  const maxIter = options.maxIter ?? 20;
+  const tol = options.tolerance ?? 0.005;
+  const restarts = options.restarts ?? 8;
+  const n = robot.joints.length;
+  const startPose = robot._snapshotJointValues();
+  if (n === 0) return { converged: false, error: Infinity, iterations: 0, alternates: [] };
+  if (!robot.selfCollision) {
+    // Nothing to avoid — just solve normally from wherever the arm is.
+    const r = solveIK(robot, target, { maxIter, tolerance: tol });
+    return { ...r, alternates: [] };
+  }
+
+  const applyPose = (pose) => {
+    for (let i = 0; i < n; i++) {
+      const j = robot.joints[i];
+      j.value = THREE.MathUtils.clamp(pose[i], j.min, j.max);
+      robot._applyJointTransform(j);
+    }
+  };
+
+  // Candidate starting combinations: as-is, all-zero, mirrored, then a spread
+  // of random poses across each joint's full range.
+  const seeds = [
+    startPose.slice(),
+    new Array(n).fill(0),
+    startPose.map(v => -v),
+  ];
+  for (let k = 0; k < restarts; k++) {
+    seeds.push(robot.joints.map(j => THREE.MathUtils.lerp(j.min, j.max, Math.random())));
+  }
+
+  const attempts = [];
+  for (const seed of seeds) {
+    applyPose(seed);
+    const r = solveIK(robot, target, { maxIter, tolerance: tol });
+    const pose = robot._snapshotJointValues();
+    const collides = robot.selfCollision && robot.checkSelfCollision();
+    attempts.push({ pose, error: r.error, converged: r.converged, collides });
+  }
+
+  const clean = attempts
+    .filter(a => a.converged && !a.collides)
+    .sort((a, b) => a.error - b.error);
+  const alternates = [];
+  for (const a of clean) {
+    if (!alternates.some(b => _posesClose(a.pose, b.pose))) alternates.push(a);
+  }
+
+  if (alternates.length) {
+    applyPose(alternates[0].pose);
+    const usedAlternateSeed = !_posesClose(alternates[0].pose, startPose);
+    return {
+      converged: true, error: alternates[0].error, blocked: false,
+      selfCollisionAvoided: usedAlternateSeed && attempts[0].collides,
+      alternates: alternates.map(a => a.pose),
+    };
+  }
+
+  // Nothing found a clean path to the target from any seed — put the arm
+  // back where it started and report the same way solveIK would.
+  applyPose(startPose);
+  const fallback = solveIK(robot, target, { maxIter, tolerance: tol });
+  return { ...fallback, alternates: [] };
+}
+
 export class IKTracker {
   constructor(robot) {
     this.robot = robot;

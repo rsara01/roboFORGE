@@ -184,7 +184,7 @@
 <main id="app">
   <div id="stage">
     <div id="hud">
-      <b>WASD / Arrows</b> drive &nbsp; <b>Q/E</b> shoulder &nbsp; <b>I/K</b> elbow &nbsp; <b>T/G</b> mast lift &nbsp; <b>R/F</b> wrist Z &nbsp; <b>Z/X</b> gripper<br/>
+      <b>WASD / Arrows</b> drive &nbsp; <b>Q/E</b> J1 yaw &nbsp; <b>R/F</b> J2 pitch &nbsp; <b>T/G</b> J3 pitch &nbsp; <b>Y/H</b> J4 pitch &nbsp; <b>U/J</b> J5 yaw &nbsp; <b>O/L</b> J6 roll &nbsp; <b>C/V</b> mast lift &nbsp; <b>Z/X</b> gripper<br/>
       <span id="hud-pose">x: 0.00  z: 0.00  yaw: 0.00</span>
     </div>
   </div>
@@ -202,17 +202,20 @@
       <div class="row">
         <button id="btn-reset">Reset robot</button>
       </div>
-      <p class="hint">Returns the chassis to its spawn pose and re-zeros the SCARA arm.</p>
+      <p class="hint">Returns the chassis to its spawn pose and re-zeros the reBot RS arm.</p>
     </div>
     <div class="panel-section">
       <h3>Controls</h3>
       <p class="hint">
         <kbd>W</kbd>/<kbd>S</kbd> or <kbd>↑</kbd>/<kbd>↓</kbd> drive forward / reverse.<br/>
         <kbd>A</kbd>/<kbd>D</kbd> or <kbd>←</kbd>/<kbd>→</kbd> turn left / right.<br/>
-        <kbd>Q</kbd>/<kbd>E</kbd> rotate shoulder (q1).<br/>
-        <kbd>I</kbd>/<kbd>K</kbd> rotate elbow (q2).<br/>
-        <kbd>T</kbd>/<kbd>G</kbd> raise / lower the whole arm on the mast.<br/>
-        <kbd>R</kbd>/<kbd>F</kbd> raise / lower the wrist Z.<br/>
+        <kbd>Q</kbd>/<kbd>E</kbd> J1 — base yaw.<br/>
+        <kbd>R</kbd>/<kbd>F</kbd> J2 — shoulder pitch.<br/>
+        <kbd>T</kbd>/<kbd>G</kbd> J3 — elbow pitch.<br/>
+        <kbd>Y</kbd>/<kbd>H</kbd> J4 — wrist pitch.<br/>
+        <kbd>U</kbd>/<kbd>J</kbd> J5 — wrist yaw.<br/>
+        <kbd>O</kbd>/<kbd>L</kbd> J6 — gripper roll.<br/>
+        <kbd>C</kbd>/<kbd>V</kbd> raise / lower the whole arm on the mast.<br/>
         <kbd>Z</kbd>/<kbd>X</kbd> close / open the gripper.
       </p>
     </div>
