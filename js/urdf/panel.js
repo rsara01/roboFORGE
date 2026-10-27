@@ -1,9 +1,9 @@
 /**
- * The URDF tab in the Arm Lab: drop a .zip, a folder or loose files, pick
- * which URDF to use if there are several, and the robot becomes the active
- * arm, so the inspector, IK, scripts, recording and grabbing all drive it.
- * This tab shows what was imported (problems, tool tip, joint roles, files)
- * and lets you pose the robot by dragging its parts in the 3D view.
+ * Importing URDF robots. Import URDF… (or dropping a .zip, folder or loose
+ * files on the 3D view) builds the robot and makes it the selected robot, so
+ * the inspector, IK, scripts, recording and grabbing all drive it. The Robot
+ * info tab, shown while an imported robot is selected, lists what was
+ * imported; parts of the robot can be dragged in the 3D view to pose it.
  */
 
 import * as THREE from 'three';
@@ -11,6 +11,7 @@ import { vfsFromFiles, filesFromDrop, baseOf, VFS } from './vfs.js';
 import { parseURDF } from './parse.js';
 import { UrdfRobot } from './build.js';
 import { packageKey, savePackage, loadPackage } from './store.js';
+import { toast } from '../notify.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -22,7 +23,8 @@ export class UrdfPanel {
    * @param {{ camera: THREE.PerspectiveCamera, orbit: any, renderer: THREE.WebGLRenderer, dropTarget: HTMLElement,
    *           loading: { show(msg?: string): void, hide(): void },
    *           active: () => any, adopt: (urdf: UrdfRobot, meta: object) => any, remove: (arm: any) => void,
-   *           loadOwnURDF: (text: string) => Promise<void>, jointsChanged: () => void }} ctx
+   *           loadOwnURDF: (text: string) => Promise<void>, jointsChanged: () => void,
+   *           showTab: (name: string) => void }} ctx
    */
   constructor(ctx) {
     this.ctx = ctx;
@@ -38,10 +40,7 @@ export class UrdfPanel {
   // ---------- input ----------
 
   _wire() {
-    $('urdf-pick-files').addEventListener('click', () => this.pickFiles());
-    $('urdf-pick-folder').addEventListener('click', () => { $('urdf-folder').value = ''; $('urdf-folder').click(); });
     $('urdf-files').addEventListener('change', (e) => this.openFiles([...e.target.files]));
-    $('urdf-folder').addEventListener('change', (e) => this.openFiles([...e.target.files]));
     $('urdf-file-select').addEventListener('change', (e) => { const a = this.arm; if (a) this.show(a.urdf.vfs, e.target.value); });
     $('urdf-tip').addEventListener('change', (e) => { this.arm?.setTipLink(e.target.value); this.ctx.jointsChanged(); this.refresh(); });
     $('urdf-frame').addEventListener('click', () => this.frame());
@@ -50,8 +49,8 @@ export class UrdfPanel {
       $(`urdf-show-${key}`).addEventListener('change', (e) => this.robot?.setShow(key, e.target.checked));
     }
 
-    // Drag and drop anywhere on the 3D view or on the tab's drop zone.
-    for (const el of [this.ctx.dropTarget, $('urdf-drop')]) {
+    // Drag and drop a .zip, a folder or loose files anywhere on the 3D view.
+    for (const el of [this.ctx.dropTarget]) {
       let depth = 0;
       el.addEventListener('dragenter', (e) => { if (!hasFiles(e)) return; e.preventDefault(); depth++; el.classList.add('is-dropping'); });
       el.addEventListener('dragover', (e) => { if (hasFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
@@ -72,8 +71,7 @@ export class UrdfPanel {
   /** Load whatever the user handed us. */
   async openFiles(files) {
     if (!files.length) return;
-    document.querySelector('.tab[data-tab="urdf"]')?.click();
-    this.ctx.loading.show('Unpacking…');
+    this.ctx.loading.show('Unpacking');
     try {
       const vfs = await vfsFromFiles(files);
       const urdfs = vfs.robotFiles();
@@ -86,7 +84,7 @@ export class UrdfPanel {
       const first = vfs.text(urdfs[0]);
       if (urdfs.length === 1 && /<robot\s+name="roboforge_arm"/.test(first)) {
         await this.ctx.loadOwnURDF(first);
-        this._status(`Loaded ${baseOf(urdfs[0])} into the editable arm.`);
+        toast(`Opened ${baseOf(urdfs[0])}.`);
         this.refresh();
         return;
       }
@@ -107,18 +105,19 @@ export class UrdfPanel {
    */
   async show(vfs, path, restore = null) {
     const text = vfs.text(path);
-    this.ctx.loading.show('Reading URDF…');
+    this.ctx.loading.show('Reading the URDF');
     try {
       const model = parseURDF(text);
       if (!model.root) throw new Error(model.problems.find(p => p.level === 'error')?.msg || 'No base link.');
       const built = new UrdfRobot(model, vfs, path);
-      await built.build((done, total) => total && this.ctx.loading.show(`Loading meshes ${done}/${total}…`));
+      await built.build((done, total) => total && this.ctx.loading.show(`Loading meshes ${done} of ${total}`));
       for (const key of Object.keys(built.show)) built.setShow(key, $(`urdf-show-${key}`).checked);
       const key = packageKey(vfs, path);
       this.ctx.adopt(built, { fileName: baseOf(path), urdfText: text, urdfPath: path, packageKey: key, restore });
       if (!restore) savePackage(key, vfs);        // remember it for saved .json files
-      this._status('');
+      this.lastError = '';
       this.refresh();
+      this.ctx.showTab('urdf');
       this.frame();
       return true;
     } catch (err) {
@@ -143,7 +142,7 @@ export class UrdfPanel {
     const path = data.urdfPath && vfs.files.has(data.urdfPath) ? data.urdfPath : vfs.robotFiles()[0];
     if (!path) throw new Error('This save has no URDF in it.');
     const ok = await this.show(vfs, path, data);
-    if (ok && !files) this._status(`Loaded ${data.name || 'the robot'} without its meshes: this browser doesn't have its package. Import the .zip again to see it properly.`, true);
+    if (ok && !files) toast(`${data.name || 'This robot'} opened without its meshes. This browser doesn't have its files, so import the .zip again.`, 'error');
     return ok;
   }
 
@@ -171,21 +170,25 @@ export class UrdfPanel {
   // ---------- panel ----------
 
   _status(msg, isError = false) {
-    const el = $('urdf-status');
-    el.textContent = msg;
-    el.classList.toggle('is-error', isError);
-    el.hidden = !msg;
+    if (isError) this.lastError = msg;
+    if (msg) toast(msg, isError ? 'error' : 'info');
   }
 
   /** Show the active imported robot (or the empty state). Called when the active arm changes. */
   refresh() {
     const a = this.arm;
     $('urdf-loaded').hidden = !a;
-    if (!a) return;
+    const tab = document.querySelector('.tab[data-tab="urdf"]');
+    tab.hidden = !a;
+    if (!a) {
+      if (tab.classList.contains('active')) this.ctx.showTab('inspector');
+      return;
+    }
     const R = a.urdf, m = R.model;
     $('urdf-name').textContent = m.name;
     $('urdf-stats').textContent =
       `${m.links.size} links · ${m.joints.size} joints · ${R.stats.meshes} meshes · ${Math.round(R.stats.triangles).toLocaleString()} triangles`;
+    $('urdf-name').title = R.urdfPath;
     for (const key of Object.keys(R.show)) $(`urdf-show-${key}`).checked = R.show[key];
 
     const urdfs = R.vfs.robotFiles();
@@ -203,20 +206,19 @@ export class UrdfPanel {
     box.innerHTML = probs.length
       ? `<p><strong>${probs.length} thing${probs.length === 1 ? '' : 's'} to check</strong> in ${esc(baseOf(R.urdfPath))}</p><ul>` +
         probs.slice(0, 40).map(p => `<li class="lvl-${p.level}">${esc(p.msg)}</li>`).join('') +
-        (probs.length > 40 ? `<li>…and ${probs.length - 40} more</li>` : '') + '</ul>'
+        (probs.length > 40 ? `<li>and ${probs.length - 40} more</li>` : '') + '</ul>'
       : '';
 
     // Tool tip and how each joint is used.
     $('urdf-tip').innerHTML = [...m.links.keys()].map(n => `<option value="${esc(n)}" ${n === a.tipLink ? 'selected' : ''}>${esc(n)}</option>`).join('');
     $('urdf-roles').innerHTML = a.joints.map((j, i) =>
       `<li><span class="idx">${i}</span><span class="name">${esc(j.urdfName)}</span><span class="role role-${j.role}">${ROLE[j.role]}</span></li>`).join('')
-      || '<li>Nothing to move: every joint is fixed.</li>';
+      || '<li>Every joint is fixed.</li>';
     const mimics = [...m.joints.values()].filter(j => j.mimic);
     $('urdf-mimic').textContent = mimics.length
-      ? 'Following other joints: ' + mimics.map(j => `${j.name} (${j.mimic.multiplier}× ${j.mimic.joint})`).join(', ') + '.'
+      ? 'Mimic: ' + mimics.map(j => `${j.name} = ${j.mimic.multiplier}× ${j.mimic.joint}`).join(', ')
       : '';
 
-    this._tree(m);
     this._listFiles(R.vfs);
   }
 

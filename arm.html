@@ -1,18 +1,14 @@
-<!--
-╔══════════════════════════════════════════════════════════════╗
-║ RoboForge - Arm Robot Simulator                             ║
-║ Created by: Rishik Saravanan                                ║
-║ Birthday: May 25th                                          ║
-║ © 2024-2026. All rights reserved.                           ║
-║ Unauthorized copying or distribution is prohibited.         ║
-╚══════════════════════════════════════════════════════════════╝
--->
+<!-- RoboForge, (c) 2024-2026 Rishik Saravanan -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>RoboForge - 6-DOF Robotic Arm Simulator</title>
+<title>RoboForge · Arm Lab</title>
+<link rel="icon" href="assets/logo-mark.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="styles.css" />
 
 <script type="importmap">
@@ -28,357 +24,280 @@
 
 <div id="mobile-block" class="mobile-block hidden">
   <div class="mobile-card">
-    <div class="logo-big">RoboForge</div>
-    <h2>Sorry, desktop only for now</h2>
-    <p>RoboForge needs a keyboard, mouse, and a wider viewport. Please open it on a desktop or laptop.</p>
+    <img src="assets/logo-mark.svg" alt="" class="mobile-logo" />
+    <h2>Open the Arm Lab on a computer</h2>
+    <p><a href="./">Home</a></p>
   </div>
 </div>
 
 <header id="topbar">
-  <div class="brand">
-    <a href="./" class="brand-link" title="Dashboard">
-      <img src="assets/logo-mark.svg" alt="RoboForge" class="brand-logo" />
-    </a>
+  <a href="./" class="brand" title="Home">
+    <img src="assets/logo-mark.svg" alt="" class="brand-logo" />
     <strong>RoboForge</strong>
-    <span class="subtitle">6-DOF Robotic Arm Simulator</span>
-  </div>
+  </a>
+  <span class="brand-divider" aria-hidden="true"></span>
+  <span class="subtitle">Arm Lab</span>
+
   <div class="topbar-actions">
-    <button id="btn-dashboard" title="Back to dashboard" onclick="window.location.href='./'">Dashboard</button>
-    <a class="topbar-link" href="about.html" title="About">About</a>
-    <span class="sep"></span>
     <button id="btn-new">New</button>
-    <button id="btn-save">Save JSON</button>
-    <button id="btn-load">Load JSON</button>
+    <button id="btn-load">Open…</button>
+    <button id="btn-save">Save</button>
+    <span class="sep"></span>
+    <button id="btn-import-urdf">Import URDF…</button>
     <button id="btn-export-urdf">Export URDF</button>
-    <button id="btn-import-urdf" title="A .urdf, a .zip of a robot package, or a folder">Import URDF</button>
-    <input type="file" id="file-input" accept=".json,.urdf,.xml" hidden />
+    <input type="file" id="file-input" accept=".json" hidden />
     <span class="sep"></span>
-    <label class="topbar-theme" title="Accent color">
-      <input type="color" id="topbar-accent" />
-    </label>
-    <label class="topbar-sound" title="Sound effects">
-      <input type="checkbox" id="topbar-sound" checked /> Sound
-    </label>
-    <span class="sep"></span>
-    <button id="btn-help">Shortcuts</button>
+    <a class="topbar-link" href="about.html">About</a>
+    <div class="settings">
+      <button id="btn-settings" class="icon-btn" aria-haspopup="true" aria-expanded="false" title="Settings">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.3 2.5h4l.4-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
+        <span class="sr-only">Settings</span>
+      </button>
+      <div id="settings-pop" class="popover" hidden>
+        <label class="field-row">Accent color <input type="color" id="topbar-accent" /></label>
+        <label class="field-row">Sound <input type="checkbox" id="topbar-sound" checked /></label>
+        <button id="btn-help">Keyboard shortcuts</button>
+      </div>
+    </div>
   </div>
 </header>
 
 <main id="app">
 
-<aside id="left-panel" class="panel">
-    <div class="panel-section">
+  <aside id="left-panel" class="panel">
+    <section class="panel-section">
       <h3>Robots</h3>
       <div id="robots-list"></div>
-      <div class="row" style="margin-top:6px;">
-        <button id="btn-spawn-robot">+ Spawn arm</button>
+      <div class="row">
+        <button id="btn-spawn-robot">Add robot</button>
       </div>
-      <p class="hint">Click an arm in the scene to make it active. The active arm is what the inspector, IK, and scripts control.</p>
-    </div>
+    </section>
 
-    <div class="panel-section">
-      <h3>Robot Dashboard</h3>
-      <p class="hint">Upload a saved robot JSON file to restore joints, links, and end effectors.</p>
-      <div class="row" style="margin-top:6px; gap: 8px; align-items: center;">
-        <button id="btn-upload-json">Upload JSON</button>
-        <span id="robot-dashboard-status" style="font-size: 12px; color: var(--fg-dim);">No file loaded yet.</span>
+    <section class="panel-section">
+      <div class="section-head">
+        <h3>Builder</h3>
+        <button id="btn-clear" class="text-btn danger">Clear</button>
       </div>
-      <div id="robot-dashboard-summary" style="margin-top:8px; font-size:12px; color: var(--fg-dim);">Robot data will appear here after upload.</div>
-    </div>
-
-    <div class="panel-section">
-      <h3>Builder</h3>
       <div class="builder-grid">
-        <button class="builder-btn" data-add="revolute">+ Revolute Joint</button>
-        <button class="builder-btn" data-add="prismatic">+ Prismatic Joint</button>
-        <button class="builder-btn" data-add="link">+ Link Segment</button>
-        <button class="builder-btn danger" id="btn-clear">Clear Robot</button>
+        <button class="builder-btn" data-add="revolute">+ Revolute</button>
+        <button class="builder-btn" data-add="prismatic">+ Prismatic</button>
+        <button class="builder-btn" data-add="link">+ Link</button>
       </div>
-      <div class="presets">
-        <label>Preset:</label>
+      <label class="field-row">Preset
         <select id="preset-select">
-          <option value="">--</option>
-          <option value="6dof">6-DOF Articulated Arm</option>
-          <option value="industrial">Industrial Robotic Arm (long reach)</option>
-          <option value="scara">SCARA (4-DOF)</option>
-          <option value="cartesian">Cartesian Gantry (3-DOF)</option>
+          <option value="">Choose a preset</option>
+          <option value="6dof">6-axis arm</option>
+          <option value="industrial">Industrial arm (long reach)</option>
+          <option value="scara">SCARA</option>
+          <option value="cartesian">Cartesian gantry</option>
         </select>
-      </div>
-    </div>
+      </label>
+    </section>
 
-    <div class="panel-section">
+    <section class="panel-section">
       <h3>Model</h3>
-      <div class="row" style="gap:8px; align-items:center;">
-        <label>Geometry
-          <select id="model-select">
-            <option value="procedural">Procedural</option>
-            <option value="RS">RS (CAD)</option>
-            <option value="urdf" disabled>Imported URDF</option>
-          </select>
-        </label>
-      </div>
-      <div class="row" style="margin-top:6px; gap:8px; align-items:center;">
+      <label class="field-row">Geometry
+        <select id="model-select">
+          <option value="procedural">Simple shapes</option>
+          <option value="RS">reBot B601 (CAD)</option>
+          <option value="urdf" disabled>Imported URDF</option>
+        </select>
+      </label>
+      <div class="row">
         <button id="btn-import-cad">Import CAD…</button>
         <input type="file" id="cad-file-input" accept=".stl,.glb,.gltf,.step,.stp" hidden />
-        <span id="model-status" class="hint" style="margin:0;">Procedural primitives.</span>
       </div>
-      <div class="row" id="gripper-row" style="margin-top:8px; gap:8px; align-items:center; display:none;">
-        <label style="flex:1;">Gripper
-          <input type="range" id="gripper-open" min="0" max="1" step="0.01" value="0.6" style="width:100%;" />
-        </label>
-        <span id="gripper-open-val" class="hint" style="margin:0; min-width:34px;">60%</span>
+      <p id="model-status" class="status"></p>
+      <div class="field-row slider-row" id="gripper-row" hidden>
+        <span>Gripper</span>
+        <input type="range" id="gripper-open" min="0" max="1" step="0.01" value="0.6" />
+        <output id="gripper-open-val" class="num">60%</output>
       </div>
-      <p class="hint">RS loads the real reBot B601 CAD (per-link GLB). Switching keeps joint values when the DOF counts match.</p>
-    </div>
+    </section>
 
-    <div class="panel-section">
+    <section class="panel-section">
       <h3>Hierarchy</h3>
       <div id="hierarchy"></div>
-    </div>
+    </section>
 
-    <div class="panel-section">
-      <h3>End Effectors</h3>
+    <section class="panel-section">
+      <h3>Tools</h3>
       <div class="ee-add-row">
-        <select id="ee-add-select"></select>
-        <button id="ee-add-btn">+ Mount</button>
+        <select id="ee-add-select" aria-label="Tool"></select>
+        <button id="ee-add-btn">Mount tool</button>
       </div>
-      <p class="hint">First mount = primary (used for IK). Add a camera alongside a tool for inspection.</p>
       <div id="ee-list"></div>
-    </div>
+    </section>
 
-    <div class="panel-section">
-      <h3>Blocks &amp; Weights</h3>
-      <p class="hint">Set a block's mass to feel its load on the joint torques.</p>
+    <section class="panel-section">
+      <div class="section-head">
+        <h3>Blocks</h3>
+        <span class="col-label">Mass (kg)</span>
+      </div>
       <div id="blocks-list"></div>
-      <div class="row" style="margin-top:6px;">
-        <button id="btn-spawn-block">+ Spawn block</button>
-        <button id="btn-refresh-blocks" title="Re-read blocks list">Refresh</button>
+      <div class="row">
+        <button id="btn-spawn-block">+ Block</button>
+        <button id="btn-reset-blocks">Reset blocks</button>
       </div>
-    </div>
+    </section>
 
-    <div class="panel-section">
-      <h3>Conveyor Belt</h3>
-      <label><input type="checkbox" id="opt-conveyor" /> Enable belt</label>
-      <div class="row" style="margin-top:4px;">
-        <label>Speed
-          <input type="range" id="conveyor-speed" min="0.02" max="0.6" step="0.005" value="0.18" style="width:120px"/>
-          <span id="conveyor-speed-val">0.18 m/s</span>
-        </label>
+    <section class="panel-section">
+      <h3>Conveyor belt</h3>
+      <label><input type="checkbox" id="opt-conveyor" /> On</label>
+      <div class="field-row slider-row">
+        <span>Speed</span>
+        <input type="range" id="conveyor-speed" min="0.02" max="0.6" step="0.005" value="0.18" />
+        <output id="conveyor-speed-val" class="num">0.18 m/s</output>
       </div>
-      <p class="hint">Cycles randomly-shaped objects past the arm. Camera and grab work on belt blocks.</p>
-    </div>
+    </section>
 
-    <div class="panel-section">
-      <h3>Robot Colors</h3>
+    <section class="panel-section">
+      <h3>Colors</h3>
       <div id="color-grid"></div>
       <button id="btn-reset-colors">Reset colors</button>
-    </div>
+    </section>
 
-    <div class="panel-section">
-      <h3>View Options</h3>
+    <section class="panel-section">
+      <h3>View</h3>
       <label><input type="checkbox" id="opt-axes" checked /> Joint axes</label>
-      <label><input type="checkbox" id="opt-trace" /> End-effector trace</label>
-      <label><input type="checkbox" id="opt-grid" checked /> Ground grid</label>
-      <label><input type="checkbox" id="opt-physics" /> Physics (gravity on free objects)</label>
-      <label><input type="checkbox" id="opt-floor" checked /> Floor collision (arm cannot pass through ground)</label>
-      <label><input type="checkbox" id="opt-selfcoll" checked /> Self-collision (links cannot pass through each other)</label>
-      <div class="row">
-        <button id="btn-reset-blocks">Reset blocks</button>
-        <button id="btn-clear-trace">Clear trace</button>
+      <div class="inline-row">
+        <label><input type="checkbox" id="opt-trace" /> Tool trace</label>
+        <button id="btn-clear-trace" class="text-btn">Clear</button>
       </div>
-    </div>
+      <label><input type="checkbox" id="opt-grid" checked /> Ground grid</label>
+      <label><input type="checkbox" id="opt-physics" /> Gravity</label>
+      <label><input type="checkbox" id="opt-floor" checked /> Floor collision</label>
+      <label><input type="checkbox" id="opt-selfcoll" checked /> Self-collision</label>
+    </section>
   </aside>
 
-<section id="viewport-wrap">
+  <section id="viewport-wrap">
     <div id="viewport"></div>
     <div id="viewport-overlay">
       <div class="overlay-info">
-        <div><strong>Selected:</strong> <span id="sel-name">none</span></div>
-        <div><strong>EE Pos:</strong> <span id="ee-pos">-</span></div>
+        <div id="sel-row" hidden><span class="k">Selected</span> <span id="sel-name"></span></div>
+        <div><span class="k">Tool position</span> <span id="ee-pos" class="num">-</span></div>
       </div>
-      <div class="overlay-gizmo-mode">
-        <span>Gizmo:</span>
+      <div class="overlay-gizmo-mode" role="group" aria-label="Gizmo">
         <button data-gizmo="rotate" class="active">Rotate</button>
-        <button data-gizmo="translate">Translate</button>
+        <button data-gizmo="translate">Move</button>
         <button data-gizmo="off">Off</button>
       </div>
     </div>
+    <div id="toasts" aria-live="polite"></div>
 
-<div id="timeline">
-      <button id="sim-play">Play</button>
-      <button id="sim-pause">Pause</button>
-      <button id="sim-step">Step</button>
-      <button id="sim-stop">Stop</button>
-      <button id="btn-record-arm">Record</button>
-      <button id="btn-stop-record-arm">Stop Record</button>
-      <button id="btn-export-arm-json">Export Path</button>
-      <button id="btn-export-arm-arduino">Export Arduino</button>
-      <span class="time">t = <span id="sim-time">0.00</span> s</span>
-      <span class="dt">dt: <input type="number" id="sim-dt" value="0.016" step="0.001" min="0.001" /></span>
-      <span>Speed:
-        <input type="range" id="sim-speed" min="0.1" max="3" step="0.1" value="1" />
-        <span id="sim-speed-val">1.0x</span>
-      </span>
-      <label style="margin-left:12px; display:inline-flex; align-items:center; gap:4px;">
-        Scale: <input id="arm-time-scale" type="range" min="0.1" max="1" step="0.05" value="1" /> <span id="arm-scale-val">1.00x</span>
-      </label>
+    <div id="timeline">
+      <div class="transport" role="group" aria-label="Simulation">
+        <button id="sim-play" class="icon-btn" title="Play (Space)" aria-label="Play"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M4 2.5v11l9-5.5z"/></svg></button>
+        <button id="sim-pause" class="icon-btn" title="Pause (Space)" aria-label="Pause"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M4 2.5h3v11H4zm5 0h3v11H9z"/></svg></button>
+        <button id="sim-step" class="icon-btn" title="Step (S)" aria-label="Step"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M3 2.5v11l7-5.5zm8 0h2v11h-2z"/></svg></button>
+        <button id="sim-stop" class="icon-btn" title="Stop (X)" aria-label="Stop"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M3 3h10v10H3z"/></svg></button>
+      </div>
+      <span class="num">t = <span id="sim-time">0.00</span> s</span>
+      <label class="tl-field">dt <input type="number" id="sim-dt" value="0.016" step="0.001" min="0.001" /> s</label>
+      <label class="tl-field">Speed <input type="range" id="sim-speed" min="0.1" max="3" step="0.1" value="1" /> <output id="sim-speed-val" class="num">1.0×</output></label>
     </div>
   </section>
 
-<aside id="right-panel" class="panel">
-    <div class="tabs">
+  <aside id="right-panel" class="panel">
+    <div class="tabs" role="tablist">
       <button class="tab active" data-tab="inspector">Inspector</button>
       <button class="tab" data-tab="ik">IK</button>
       <button class="tab" data-tab="script">Script</button>
       <button class="tab" data-tab="plot">Plot</button>
       <button class="tab" data-tab="record">Record</button>
-      <button class="tab" data-tab="urdf">URDF</button>
+      <button class="tab" data-tab="urdf" hidden>Robot info</button>
     </div>
 
     <div class="tab-panel active" data-panel="inspector">
-      <h3>Joint Inspector</h3>
       <div id="inspector"><em>No joint selected</em></div>
-      <h3>Joint Torques (static)</h3>
+      <h3>Torque</h3>
       <div id="torque-readout"></div>
-      <h3>All Joints</h3>
+      <h3>Joints</h3>
       <div id="joint-sliders"></div>
     </div>
 
     <div class="tab-panel" data-panel="ik">
-      <h3>Inverse Kinematics (CCD)</h3>
-      <p class="hint">Set a target world-position; solver moves joints to reach it.</p>
-      <div class="row">
-        <label>X <input type="number" id="ik-x" step="0.05" value="0.5" /></label>
-        <label>Y <input type="number" id="ik-y" step="0.05" value="0.5" /></label>
-        <label>Z <input type="number" id="ik-z" step="0.05" value="0.5" /></label>
+      <div class="xyz">
+        <label>X (m) <input type="number" id="ik-x" step="0.05" value="0.5" /></label>
+        <label>Y (m) <input type="number" id="ik-y" step="0.05" value="0.5" /></label>
+        <label>Z (m) <input type="number" id="ik-z" step="0.05" value="0.5" /></label>
       </div>
-      <label>Iterations <input type="number" id="ik-iter" value="20" min="1" max="200" /></label>
-      <label>Tolerance <input type="number" id="ik-tol" value="0.005" step="0.001" /></label>
-      <div class="row">
-        <button id="ik-solve">Solve once</button>
-        <button id="ik-track">Track Target</button>
-        <button id="ik-stop">Stop Tracking</button>
+      <div class="xyz">
+        <label>Iterations <input type="number" id="ik-iter" value="20" min="1" max="200" /></label>
+        <label>Tolerance (m) <input type="number" id="ik-tol" value="0.005" step="0.001" /></label>
       </div>
       <div class="row">
-        <button id="ik-cycle">Cycle Solution</button>
+        <button id="ik-solve" class="primary">Solve once</button>
+        <button id="ik-track">Track target</button>
+        <button id="ik-cycle" title="Try another joint configuration for the same target">Cycle solution</button>
       </div>
-      <label><input type="checkbox" id="ik-show-target" checked /> Show target marker</label>
-      <p class="hint">Tip: drag the orange target sphere in the scene with the Translate gizmo. "Solve once" checks for self-collision and, if the direct pose overlaps the arm with itself, tries other joint combinations automatically — use "Cycle Solution" to step through any other clean combinations it found for the same target.</p>
+      <label><input type="checkbox" id="ik-show-target" checked /> Show target</label>
     </div>
 
     <div class="tab-panel" data-panel="script">
-      <h3>Scripting Panel</h3>
-      <p class="hint">JavaScript with helpers: <code>setJoint(i,val)</code>, <code>getJoint(i)</code>, <code>moveTo(i,val,dur)</code>, <code>moveLinear([…],dur)</code>, <code>wait(s)</code>, <code>ikTo(x,y,z,dur)</code>, <code>gripper(o)</code>, <code>suction(b)</code>, <code>weld(b)</code>, <code>drill(b)</code>, <code>magnet(b)</code>, <code>laser(b)</code>, <code>paint(b,color?)</code>, <code>scan()</code>, <code>blocks()</code>, <code>grab()</code>, <code>release()</code>, <code>resetBlocks()</code>, <code>spawnBlock(x,z,size)</code>, <code>clearBlocks()</code>, <code>jointNames()</code>, <code>physicsOn()</code>, <code>log(x)</code>.</p>
+      <label class="field-row">Example
+        <select id="script-example">
+          <option value="">Choose an example</option>
+          <option value="basic">Simple pick and place</option>
+          <option value="loop">Pick and place loop</option>
+          <option value="grabOrange">Find the orange block</option>
+          <option value="cameraSort">Sort by color</option>
+          <option value="beltSweep">Conveyor sweep (multi-robot)</option>
+        </select>
+      </label>
+      <textarea id="script-area" spellcheck="false" aria-label="Script"></textarea>
       <div class="row">
-        <label>Examples
-          <select id="script-example">
-            <option value="">— pick one —</option>
-            <option value="basic">Simple pick &amp; place</option>
-            <option value="loop">Continuous pick &amp; place loop</option>
-            <option value="grabOrange">Detect &amp; grab orange block</option>
-            <option value="cameraSort">Camera-driven pick &amp; place (color sort)</option>
-            <option value="beltSweep">Sweep conveyor belt → drop right (multi-robot belt)</option>
-          </select>
-        </label>
-      </div>
-      <textarea id="script-area" spellcheck="false">
-// Detect the orange block with the camera and grab it (3-finger gripper).
-// Setup: mount a 3-finger gripper as the primary EE, then mount a Camera as auxiliary.
-// Physics is turned on automatically below.
-
-function isOrange(b) {
-  return b.r > 0.6 && b.g > 0.3 && b.g < 0.85 && b.b < 0.5
-      && (b.r - b.b) > 0.35;
-}
-
-async function findOrange() {
-  const sweep = [
-    [0.1,  0.6,  0.0],
-    [0.5,  0.6,  0.3],
-    [0.5,  0.6, -0.3],
-    [-0.2, 0.6,  0.0],
-  ];
-  for (const [x, y, z] of sweep) {
-    await ikTo(x, y, z, 0.7);
-    await wait(0.15);
-    const seen = scan({ fov: Math.PI / 2.2, range: 3.0 });
-    const hit = seen.find(isOrange);
-    if (hit) return hit;
-  }
-  return null;
-}
-
-async function run() {
-  physicsOn(true);
-
-  log("Searching for an orange block...");
-  const target = await findOrange();
-  if (!target) { log("No orange block visible."); return; }
-
-  log(`Found orange block at (${target.x.toFixed(2)}, ${target.z.toFixed(2)}). Picking up.`);
-
-  const hoverDy = 0.12;
-  gripper(1);                                              // open
-  await ikTo(target.x, target.y + hoverDy, target.z, 1.0); // approach
-  await ikTo(target.x, target.y + 0.02,    target.z, 0.5); // descend
-  grab();
-  gripper(0);                                              // close
-  await wait(0.2);
-  await ikTo(target.x, target.y + hoverDy, target.z, 0.5); // lift
-  await ikTo(0.0, 0.6, 0.4, 1.2);                          // present
-  log("Got it.");
-}
-run();
-      </textarea>
-      <div class="row">
-        <button id="script-run">Run</button>
-        <button id="script-stop">Stop</button>
+        <button id="script-run" class="primary">Run</button>
       </div>
       <h4>Output</h4>
       <pre id="script-output"></pre>
+      <details class="api">
+        <summary>API</summary>
+        <p class="api-list"><code>setJoint(i, v)</code> <code>getJoint(i)</code> <code>getAllJoints()</code> <code>jointNames()</code>
+          <code>moveTo(i, v, s)</code> <code>moveLinear([…], s)</code> <code>ikTo(x, y, z, s)</code> <code>wait(s)</code>
+          <code>mountTool(type)</code> <code>gripper(0..1)</code> <code>grab()</code> <code>release()</code>
+          <code>suction(on)</code> <code>magnet(on)</code> <code>weld(on)</code> <code>drill(on)</code> <code>laser(on)</code> <code>paint(on, color)</code>
+          <code>scan()</code> <code>blocks()</code> <code>spawnBlock(x, z, size)</code> <code>resetBlocks()</code> <code>clearBlocks()</code>
+          <code>physicsOn(on)</code> <code>conveyorOn(on)</code> <code>resizeConveyor({…})</code> <code>robots()</code> <code>robotPos(i)</code> <code>log(x)</code></p>
+      </details>
     </div>
 
     <div class="tab-panel" data-panel="plot">
-      <h3>Joint Value Plot</h3>
       <canvas id="plot-canvas" width="320" height="220"></canvas>
       <div class="row">
         <button id="plot-clear">Clear</button>
-        <label><input type="checkbox" id="plot-running" checked /> Recording</label>
+        <label><input type="checkbox" id="plot-running" checked /> Live</label>
       </div>
       <div id="plot-legend"></div>
     </div>
 
     <div class="tab-panel" data-panel="record">
-      <h3>Motion Recording</h3>
-      <p class="hint">The <b>Record / Stop / Export Path / Export Arduino</b> buttons in the timeline above capture every joint movement (including end-effector path while IK is tracking the orange ball) and save them out as a coordinate matrix or stepper-motor sketch.</p>
       <div class="row">
-        <button id="btn-play-arm">Play sim</button>
-        <button id="btn-stop-play-arm">Stop play</button>
-        <button id="btn-export-arm-csv">Save CSV matrix</button>
+        <button id="btn-record-arm" class="primary">● Record</button>
+        <button id="btn-play-arm" disabled>Play recording</button>
+        <details class="menu" id="export-menu">
+          <summary class="button-like">Export ▾</summary>
+          <div class="menu-items">
+            <button id="btn-export-arm-json">Path (JSON)</button>
+            <button id="btn-export-arm-csv">CSV</button>
+            <button id="btn-export-arm-arduino">Arduino sketch</button>
+          </div>
+        </details>
       </div>
-      <p class="hint">Use the <b>Scale</b> slider in the timeline to slow playback. It is clamped to ≤ 1.0× — recordings can be slowed but never sped up.</p>
-      <div id="arm-rec-status" class="hint">0 frames · 0.00s</div>
+      <div class="field-row slider-row">
+        <span>Playback speed</span>
+        <input id="arm-time-scale" type="range" min="0.1" max="1" step="0.05" value="1" />
+        <output id="arm-scale-val" class="num">1.0×</output>
+      </div>
+      <p id="arm-rec-status" class="status num">0 frames · 0.00 s</p>
     </div>
 
     <div class="tab-panel" data-panel="urdf">
-      <h3>Import a robot (URDF)</h3>
-      <div id="urdf-drop" class="urdf-drop">
-        <p>Drop a <b>.zip</b>, a <b>folder</b>, or a <b>.urdf</b> with its mesh files here or anywhere on the 3D view. It replaces the active arm; use <b>+ Spawn arm</b> first to keep it.</p>
-        <div class="row">
-          <button id="urdf-pick-files">Choose .zip or files</button>
-          <button id="urdf-pick-folder">Choose folder</button>
-        </div>
-        <input type="file" id="urdf-files" multiple hidden accept=".zip,.urdf,.xml,.xacro,.stl,.dae,.obj,.mtl,.glb,.gltf,.bin,.png,.jpg,.jpeg,.tga" />
-        <input type="file" id="urdf-folder" webkitdirectory multiple hidden />
-        <p class="hint">Meshes: STL, DAE, OBJ (+MTL), glTF/GLB. <code>package://</code> paths are found inside the zip. Nothing is uploaded; it all stays in your browser.</p>
-      </div>
-      <p id="urdf-status" class="urdf-status" hidden></p>
-
+      <input type="file" id="urdf-files" multiple hidden accept=".zip,.urdf,.xml,.xacro,.stl,.dae,.obj,.mtl,.glb,.gltf,.bin,.png,.jpg,.jpeg,.tga" />
       <div id="urdf-loaded" hidden>
-        <div class="urdf-head"><strong id="urdf-name"></strong><span id="urdf-stats" class="hint"></span></div>
-        <div class="row" id="urdf-file-row" hidden>
-          <label>URDF <select id="urdf-file-select"></select></label>
-        </div>
+        <div class="urdf-head"><strong id="urdf-name"></strong><span id="urdf-stats" class="status num"></span></div>
+        <label class="field-row" id="urdf-file-row" hidden>URDF <select id="urdf-file-select"></select></label>
         <div id="urdf-problems" class="urdf-problems" hidden></div>
 
         <h4>Show</h4>
@@ -387,31 +306,26 @@ run();
           <label><input type="checkbox" id="urdf-show-collision" /> Collision</label>
           <label><input type="checkbox" id="urdf-show-frames" /> Link frames</label>
           <label><input type="checkbox" id="urdf-show-axes" /> Joint axes</label>
-          <label><input type="checkbox" id="urdf-show-com" /> Centre of mass</label>
+          <label><input type="checkbox" id="urdf-show-com" /> Center of mass</label>
         </div>
 
-        <h4>Tool tip</h4>
-        <p class="hint">The point IK steers, and where grab() picks things up. Tools you mount go here too.</p>
-        <div class="row"><select id="urdf-tip" style="width:100%"></select></div>
+        <h4>Tool link</h4>
+        <select id="urdf-tip" aria-label="Tool link" class="full"></select>
 
         <h4>Joints</h4>
-        <p class="hint">Numbers are what <code>setJoint(i, value)</code> uses. Move them in the Inspector tab, with IK or scripts, or grab a part in the 3D view and drag it.</p>
         <ul id="urdf-roles" class="urdf-roles"></ul>
-        <p id="urdf-mimic" class="hint"></p>
+        <p id="urdf-mimic" class="status"></p>
         <div class="row">
           <button id="urdf-frame">Frame robot</button>
         </div>
 
-        <h4>Links and joints</h4>
-        <ul id="urdf-tree" class="urdf-tree"></ul>
-
         <details class="urdf-files">
-          <summary>Files in the package (<span id="urdf-file-count"></span>)</summary>
+          <summary>Files (<span id="urdf-file-count"></span>)</summary>
           <ul id="urdf-file-list"></ul>
         </details>
 
-        <div class="row" style="margin-top:12px;">
-          <button id="urdf-close" class="danger">Remove this robot</button>
+        <div class="row spaced">
+          <button id="urdf-close" class="danger">Remove robot</button>
         </div>
       </div>
     </div>
@@ -421,32 +335,42 @@ run();
 
 <div id="help-modal" class="modal hidden">
   <div class="modal-body">
-    <h2>Keyboard Shortcuts</h2>
+    <h2>Keyboard shortcuts</h2>
     <table>
-      <tr><td><kbd>R</kbd></td><td>Rotate gizmo mode</td></tr>
-      <tr><td><kbd>T</kbd></td><td>Translate gizmo mode</td></tr>
-      <tr><td><kbd>G</kbd></td><td>Toggle gizmo on/off</td></tr>
-      <tr><td><kbd>Space</kbd></td><td>Play / Pause simulation</td></tr>
-      <tr><td><kbd>S</kbd></td><td>Step simulation by one dt</td></tr>
-      <tr><td><kbd>X</kbd></td><td>Stop / reset simulation</td></tr>
+      <tr><td><kbd>R</kbd></td><td>Rotate gizmo</td></tr>
+      <tr><td><kbd>T</kbd></td><td>Move gizmo</td></tr>
+      <tr><td><kbd>G</kbd></td><td>Gizmo on or off</td></tr>
+      <tr><td><kbd>Space</kbd></td><td>Play or pause</td></tr>
+      <tr><td><kbd>S</kbd></td><td>Step one dt</td></tr>
+      <tr><td><kbd>X</kbd></td><td>Stop and reset time</td></tr>
       <tr><td><kbd>Esc</kbd></td><td>Deselect</td></tr>
-      <tr><td><kbd>Delete</kbd></td><td>Delete selected joint/link</td></tr>
-      <tr><td><kbd>1..6</kbd></td><td>Select joint N</td></tr>
-      <tr><td><kbd>← / →</kbd></td><td>Decrease / increase selected joint value</td></tr>
-      <tr><td><kbd>F</kbd></td><td>Frame robot in view</td></tr>
-      <tr><td><kbd>Ctrl/Cmd+S</kbd></td><td>Save robot to JSON file</td></tr>
+      <tr><td><kbd>Delete</kbd></td><td>Delete the selected joint</td></tr>
+      <tr><td><kbd>1</kbd>–<kbd>6</kbd></td><td>Select joint</td></tr>
+      <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Nudge the selected joint</td></tr>
+      <tr><td><kbd>F</kbd></td><td>Frame the robot</td></tr>
+      <tr><td><kbd>Ctrl</kbd>/<kbd>⌘</kbd> <kbd>S</kbd></td><td>Save</td></tr>
     </table>
     <button id="help-close">Close</button>
   </div>
 </div>
 
-<div id="boot-error" style="display:none;position:fixed;top:50px;left:50%;transform:translateX(-50%);background:#3a1d1d;color:#ffd0d0;border:1px solid #ef5350;padding:10px 14px;border-radius:6px;font:13px monospace;max-width:80vw;z-index:9999;white-space:pre-wrap;"></div>
+<dialog id="ask-dialog">
+  <form method="dialog">
+    <p id="ask-text"></p>
+    <div class="row end">
+      <button value="cancel">Cancel</button>
+      <button value="ok" class="primary" id="ask-ok">OK</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="boot-error" class="boot-error" hidden></div>
 <script>
   (function () {
     function show(msg) {
       var el = document.getElementById('boot-error');
       if (!el) return;
-      el.style.display = 'block';
+      el.hidden = false;
       el.textContent = (el.textContent ? el.textContent + '\n' : '') + msg;
     }
     window.addEventListener('error', function (e) {
@@ -457,15 +381,14 @@ run();
     window.addEventListener('unhandledrejection', function (e) {
       show('Unhandled promise: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
     });
-    // If file:// is used, ES module imports will silently fail; warn explicitly.
+    // ES modules don't load from file://, so say so instead of failing silently.
     if (location.protocol === 'file:') {
-      show('Open via http://localhost:3000 (run "python3 serve.py"). file:// blocks ES module imports.');
+      show('Open this through a local server (python3 serve.py), not as a file.');
     }
   })();
 </script>
 <script>
-  // Block mobile / touch-only devices: this UI relies on hover, drag, and a
-  // wide viewport. We block by viewport width OR coarse-pointer + no fine pointer.
+  // The Arm Lab needs a mouse and a wide screen.
   (function () {
     function isMobile() {
       const narrow = window.innerWidth < 900;
@@ -475,21 +398,16 @@ run();
     }
     function refresh() {
       const block = document.getElementById('mobile-block');
-      const app = document.getElementById('app');
-      if (!block || !app) return;
-      if (isMobile()) {
-        block.classList.remove('hidden');
-        document.body.classList.add('mobile-blocked');
-      } else {
-        block.classList.add('hidden');
-        document.body.classList.remove('mobile-blocked');
-      }
+      if (!block) return;
+      const m = isMobile();
+      block.classList.toggle('hidden', !m);
+      document.body.classList.toggle('mobile-blocked', m);
     }
     refresh();
     window.addEventListener('resize', refresh);
   })();
 </script>
 
-<script type="module" src="js/main.js?v=19"></script>
+<script type="module" src="js/main.js?v=20"></script>
 </body>
 </html>

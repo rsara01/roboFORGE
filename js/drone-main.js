@@ -1,12 +1,4 @@
-
-/**
- * ╔══════════════════════════════════════════════════════════════╗
- * ║ RoboForge - Drone Simulator Main Module                     ║
- * ║ Created by: Rishik Saravanan                                ║
- * ║ Birthday: May 25th                                          ║
- * ║ © 2024-2026. All rights reserved.                           ║
- * ╚══════════════════════════════════════════════════════════════╝
- */
+// RoboForge, (c) 2024-2026 Rishik Saravanan
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';

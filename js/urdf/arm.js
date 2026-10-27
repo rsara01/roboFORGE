@@ -226,7 +226,7 @@ export class UrdfArm {
     return m || null;
   }
 
-  /** Mark every link with the joint that moves it, for clicking and recolouring. */
+  /** Mark every link with the joint that moves it, for clicking and recoloring. */
   _tagLinks() {
     const byName = new Map(this.joints.map(j => [j.urdfName, j]));
     for (const [name, L] of this.urdf.links) {
@@ -260,7 +260,7 @@ export class UrdfArm {
       update() {},
       dispose() {},
     });
-    grasp.position.copy(this._gripCentre());
+    grasp.position.copy(this._gripCenter());
   }
 
   /** Links moved by the gripper joints (and anything mimicking them). */
@@ -276,7 +276,7 @@ export class UrdfArm {
    * hand), that centre sits on the moving jaw, so pull it halfway back toward
    * the file's own tool frame, which sits between the jaws.
    */
-  _gripCentre() {
+  _gripCenter() {
     const links = this._fingerLinks();
     if (!links.length) return new THREE.Vector3();
     const saved = this.gripJoints.map(j => j.value);
@@ -495,7 +495,7 @@ export class UrdfArm {
   setColor(key, hex) { this.colors[key] = hex; if (key === 'link') this._paintLinks(); }
   resetColors() { this.colors = {}; for (const j of this.joints) j.link.color = null; this._paintLinks(); }
 
-  /** Recolour visual meshes: per-joint link colour, else the global link colour, else the file's own. */
+  /** Recolor visual meshes: per-joint link color, else the global link color, else the file's own. */
   _paintLinks() {
     for (const L of this.urdf.links.values()) {
       const want = L.ownerJoint?.link.color ?? this.colors.link ?? null;

@@ -1,11 +1,4 @@
-/**
- * ╔══════════════════════════════════════════════════════════════╗
- * ║ RoboForge - Robot Definition & Control                      ║
- * ║ Created by: Rishik Saravanan                                ║
- * ║ Birthday: May 25th                                          ║
- * ║ © 2024-2026. All rights reserved.                           ║
- * ╚══════════════════════════════════════════════════════════════╝
- */
+// RoboForge, (c) 2024-2026 Rishik Saravanan
 
 import * as THREE from 'three';
 import { MeshLibrary } from './meshLibrary.js';
@@ -35,16 +28,18 @@ const LINK_AXIS_QUAT = (() => {
   return q;
 })();
 
+// Graphite joints and light links like the home page arm, with the accent
+// orange on the revolute joint caps.
 export const DEFAULT_COLORS = {
-  revolute:     0x4ea1ff,
-  revoluteDark: 0x1f4a7a,
-  prismatic:    0xffae42,
-  prismaticDark:0x8a5a1d,
-  link:         0xc9d4e0,
-  linkDark:     0x6a7686,
-  base:         0x556677,
-  baseDark:     0x2c3744,
-  bolt:         0x2a2f36,
+  revolute:     0x2c2d31,
+  revoluteDark: 0xf08327,
+  prismatic:    0x3b3c40,
+  prismaticDark:0x1d1e21,
+  link:         0xd9d6cf,
+  linkDark:     0x8d897f,
+  base:         0x3b3c40,
+  baseDark:     0x27282b,
+  bolt:         0x8d897f,
 };
 
 let _idCounter = 1;
@@ -464,7 +459,7 @@ _buildLinkVisual(j) {
     // The whole moving sub-assembly (link structure + its motor module) is a set
     // of baked, per-colour meshes, already in the joint-local frame pointing +Y,
     // so they ride the articulator and rotate as one with the joint. The motor
-    // parts are tagged 'revolute' so each joint's pivot reads as a blue module.
+    // parts are tagged 'revolute' so each joint's pivot reads as a motor module.
     const cadParts = this._cadParts(j.meshId);
     if (cadParts) {
       const grp = new THREE.Group();
@@ -856,8 +851,8 @@ rebuildJointGeometry(j) {
     this.gripperOpen = clamp(t ?? 0, 0, 1);
     const j = this.gripperJoint;
     if (!j || !j.fingers) return false;
-    const closeInset = 0.006; // metres each jaw presses past rest to mate when closed
-    const travel = 0.03;      // metres each jaw slides from closed to fully open (jaw tip
+    const closeInset = 0.006; // meters each jaw presses past rest to mate when closed
+    const travel = 0.03;      // meters each jaw slides from closed to fully open (jaw tip
                                // stays inside the ±92mm rail housing at full travel)
     let dz = -closeInset + this.gripperOpen * (travel + closeInset);
     if (this._holdHalf) dz = Math.max(dz, Math.min(travel, this._holdHalf));   // jaw faces stop on the object

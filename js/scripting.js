@@ -34,6 +34,13 @@ export class ScriptRunner {
   }
 
 async run(source) {
+    this.running = true;
+    this.onChange?.(true);
+    try { await this._run(source); }
+    finally { this.running = false; this.onChange?.(false); }
+  }
+
+  async _run(source) {
     this.cancelToken = { cancelled: false };
     const token = this.cancelToken;
     const robot = this.robot;
@@ -169,7 +176,7 @@ const ikTo = async (x, y, z, duration = 1.0) => {
           for (let k = 0; k < 4; k++) solveIK(robot, target, { maxIter: 10, tolerance: 0.002 });
         }
         const left = robot.getEndEffectorWorldPosition(new THREE.Vector3()).distanceTo(target);
-        if (left > 0.01) log(`[ikTo] got within ${(left * 100).toFixed(1)} cm of (${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}): out of reach, or blocked by the floor or the arm itself`);
+        if (left > 0.01) log(`[ikTo] ${(left * 100).toFixed(1)} cm short of (${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)})`);
         if (globalThis.__ikDebug) globalThis.__ikDebug.push({ err, alt: alt.error, left });
       }
     };
@@ -237,6 +244,14 @@ const gripper = (open01) => {
     };
     const clearBlocks = () => { physics?.removeAll(); blockN = 0; };
     const jointNames = () => robot.joints.map(j => j.name);
+    // Mount a tool unless one of that type is already on (so examples set themselves up).
+    const mountTool = (type) => {
+      const have = findEE(type);
+      if (have) return have;
+      const ee = this.app?.addEndEffector?.(type) || null;
+      this.app?.refreshUI?.();
+      return ee;
+    };
     const physicsOn = (on = true) => physics?.setEnabled(!!on);
 
     const app = this.app;
@@ -254,7 +269,7 @@ const gripper = (open01) => {
       setJoint, getJoint, getAllJoints,
       moveTo, moveLinear, ikTo, wait,
       gripper, suction, weld, drill, magnet, laser, paint,
-      grab, release, scan, blocks, resetBlocks, spawnBlock, clearBlocks, jointNames, physicsOn,
+      grab, release, scan, blocks, resetBlocks, spawnBlock, clearBlocks, jointNames, mountTool, physicsOn,
       conveyor, conveyorOn, resizeConveyor, robots, robotPos,
       log,
       THREE,
@@ -266,12 +281,12 @@ const argNames = Object.keys(api);
     try {
       const fn = new Function(...argNames, '"use strict";\nreturn (async () => {\n' + source + '\n})();');
       await fn(...argValues);
-      this.log('[script] finished');
+      this.log('[script] done');
     } catch (err) {
       if (err === SCRIPT_CANCELLED) {
-        this.log('[script] cancelled');
+        this.log('[script] stopped');
       } else {
-        this.log('[script error] ' + (err && err.message ? err.message : err));
+        this.log('[script] error: ' + (err && err.message ? err.message : err));
         console.error(err);
       }
     }

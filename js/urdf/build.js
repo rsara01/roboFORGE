@@ -242,7 +242,7 @@ export class UrdfRobot {
     return false;
   }
 
-  /** Size helpers to the robot: frames, joint axes and centres of mass. */
+  /** Size helpers to the robot: frames, joint axes and centers of mass. */
   _makeHelpers() {
     this.group.updateWorldMatrix(true, true);
     const box = new THREE.Box3().setFromObject(this.group);

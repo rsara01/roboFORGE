@@ -1,18 +1,19 @@
-
+// RoboForge, (c) 2024-2026 Rishik Saravanan
 
 import { EE_TYPES, EE_LABELS } from './endEffectors.js';
 import { DEFAULT_COLORS } from './robot.js';
 import { SCRIPT_EXAMPLES } from './scriptExamples.js';
 import { computeJointTorques } from './dynamics.js';
+import { toast, ask } from './notify.js';
 
 const COLOR_FIELDS = [
   { key: 'revolute',     label: 'Revolute joint' },
-  { key: 'revoluteDark', label: 'Revolute trim' },
+  { key: 'revoluteDark', label: 'Revolute cap' },
   { key: 'prismatic',    label: 'Prismatic joint' },
   { key: 'prismaticDark',label: 'Prismatic trim' },
-  { key: 'link',         label: 'Link body' },
+  { key: 'link',         label: 'Link' },
   { key: 'linkDark',     label: 'Link flange' },
-  { key: 'base',         label: 'Base pedestal' },
+  { key: 'base',         label: 'Base' },
   { key: 'baseDark',     label: 'Base trim' },
 ];
 
@@ -23,6 +24,7 @@ export class UI {
     this._wire();
     this._populateEEAddSelect();
     this._buildColorGrid();
+    this._loadExample('basic');
   }
 
   _cacheEls() {
@@ -38,19 +40,18 @@ export class UI {
       btnResetColors: $('btn-reset-colors'),
       blocksList: $('blocks-list'),
       btnSpawnBlock: $('btn-spawn-block'),
-      btnRefreshBlocks: $('btn-refresh-blocks'),
       torqueReadout: $('torque-readout'),
       robotsList: $('robots-list'),
       btnSpawnRobot: $('btn-spawn-robot'),
-      btnUploadJson: $('btn-upload-json'),
-      robotDashboardStatus: $('robot-dashboard-status'),
-      robotDashboardSummary: $('robot-dashboard-summary'),
+      selRow: $('sel-row'),
       selName: $('sel-name'),
       eePos: $('ee-pos'),
       simTime: $('sim-time'),
-      simDt: $('sim-dt'),
-      simSpeed: $('sim-speed'),
       simSpeedVal: $('sim-speed-val'),
+      ikTrack: $('ik-track'),
+      scriptRun: $('script-run'),
+      scriptArea: $('script-area'),
+      scriptExample: $('script-example'),
       tabs: document.querySelectorAll('.tab'),
       tabPanels: document.querySelectorAll('.tab-panel'),
       gizmoBtns: document.querySelectorAll('.overlay-gizmo-mode button'),
@@ -72,48 +73,43 @@ export class UI {
   _buildColorGrid() {
     const wrap = this.elements.colorGrid;
     wrap.innerHTML = '';
-    const robot = this.ctx.robot;
     for (const f of COLOR_FIELDS) {
       const row = document.createElement('label');
-      const hex = '#' + (robot.colors[f.key] ?? DEFAULT_COLORS[f.key]).toString(16).padStart(6, '0');
-      row.innerHTML = `<span>${f.label}</span><input type="color" data-key="${f.key}" value="${hex}"/>`;
-      const inp = row.querySelector('input');
-      inp.addEventListener('input', (e) => {
-        robot.setColor(f.key, parseInt(e.target.value.slice(1), 16));
+      row.innerHTML = `<span>${f.label}</span><input type="color" data-key="${f.key}" value="${this._hex(f.key)}"/>`;
+      row.querySelector('input').addEventListener('input', (e) => {
+        this.ctx.robot.setColor(f.key, parseInt(e.target.value.slice(1), 16));
       });
       wrap.appendChild(row);
     }
   }
 
+  _hex(key) {
+    return '#' + (this.ctx.robot.colors[key] ?? DEFAULT_COLORS[key]).toString(16).padStart(6, '0');
+  }
+
   refreshColorGrid() {
-    const robot = this.ctx.robot;
-    for (const inp of this.elements.colorGrid.querySelectorAll('input[type="color"]')) {
-      const key = inp.dataset.key;
-      const hex = '#' + (robot.colors[key] ?? DEFAULT_COLORS[key]).toString(16).padStart(6, '0');
-      inp.value = hex;
-    }
+    for (const inp of this.elements.colorGrid.querySelectorAll('input[type="color"]')) inp.value = this._hex(inp.dataset.key);
   }
 
   _wire() {
     const { ctx } = this;
+    const $ = (id) => document.getElementById(id);
 
     document.querySelectorAll('.builder-btn[data-add]').forEach(btn => {
       btn.addEventListener('click', () => {
         const kind = btn.dataset.add;
         if (ctx.robot.isUrdf) {
-          alert('An imported robot keeps the joints from its URDF. Pick a preset or press New to build your own arm.');
+          toast('An imported robot keeps its URDF joints. Choose a preset to build your own.');
           return;
         }
         if (kind === 'revolute') ctx.robot.addJoint({ type: 'revolute' });
         else if (kind === 'prismatic') ctx.robot.addJoint({ type: 'prismatic' });
         else if (kind === 'link') {
-
           const last = ctx.robot.joints[ctx.robot.joints.length - 1];
           if (last) {
             last.link.length += 0.15;
             ctx.robot.rebuildJointGeometry(last);
           } else {
-
             const j = ctx.robot.addJoint({ type: 'revolute', min: 0, max: 0 });
             if (j) j.name = 'Fixed';
           }
@@ -122,15 +118,14 @@ export class UI {
       });
     });
 
-    document.getElementById('btn-clear').addEventListener('click', () => {
-      if (confirm('Clear the robot?')) {
-        ctx.robot.clear();
-        ctx.onSelect(null);
-        ctx.refreshUI();
-      }
+    $('btn-clear').addEventListener('click', async () => {
+      if (!(await ask('Remove every joint from this robot?', 'Clear'))) return;
+      ctx.robot.clear();
+      ctx.onSelect(null);
+      ctx.refreshUI();
     });
 
-    document.getElementById('preset-select').addEventListener('change', (e) => {
+    $('preset-select').addEventListener('change', (e) => {
       const preset = e.target.value;
       if (!preset) return;
       ctx.loadPreset(preset);
@@ -149,159 +144,153 @@ export class UI {
     });
 
     this.elements.btnSpawnBlock.addEventListener('click', () => {
-      ctx.physics.setEnabled(true);
-      const phys = document.getElementById('opt-physics');
-      if (phys) phys.checked = true;
+      this._gravityOn();
       const r = 0.4 + Math.random() * 0.2;
       const a = Math.random() * Math.PI * 2;
-      ctx.physics.spawnBox(
-        { x: Math.cos(a) * r, y: 0.05, z: Math.sin(a) * r },
-        0.06,
-        Math.floor(Math.random() * 0xffffff),
-      );
+      ctx.physics.spawnBox({ x: Math.cos(a) * r, y: 0.05, z: Math.sin(a) * r }, 0.06, Math.floor(Math.random() * 0xffffff));
       this.refreshBlocksList();
     });
-    this.elements.btnRefreshBlocks.addEventListener('click', () => this.refreshBlocksList());
+    $('btn-reset-blocks').addEventListener('click', () => {
+      ctx.physics.resetBlocks();
+      this._gravityOn();
+      this.refreshBlocksList();
+    });
 
-    if (this.elements.btnSpawnRobot) {
-      this.elements.btnSpawnRobot.addEventListener('click', () => {
-        ctx.spawnRobot?.();
-        this.refreshRobotsList();
-      });
-    }
+    this.elements.btnSpawnRobot.addEventListener('click', () => {
+      ctx.spawnRobot?.();
+      this.refreshRobotsList();
+    });
 
     const conv = ctx.conveyor;
     if (conv) {
-      const optConv = document.getElementById('opt-conveyor');
-      const speed = document.getElementById('conveyor-speed');
-      const speedVal = document.getElementById('conveyor-speed-val');
-      optConv.addEventListener('change', (e) => {
+      const speedVal = $('conveyor-speed-val');
+      $('opt-conveyor').addEventListener('change', (e) => {
         conv.setEnabled(e.target.checked);
-        if (e.target.checked) {
-          ctx.physics.setEnabled(true);
-          const phys = document.getElementById('opt-physics');
-          if (phys) phys.checked = true;
-        }
+        if (e.target.checked) this._gravityOn();
         this.refreshBlocksList();
       });
-      speed.addEventListener('input', (e) => {
+      $('conveyor-speed').addEventListener('input', (e) => {
         const v = parseFloat(e.target.value);
         conv.setSpeed(v);
         speedVal.textContent = v.toFixed(2) + ' m/s';
       });
     }
 
-    document.getElementById('opt-axes').addEventListener('change', (e) => {
-      ctx.robot.setShowAxes(e.target.checked);
-    });
-    document.getElementById('opt-trace').addEventListener('change', (e) => {
-      ctx.setTraceEnabled(e.target.checked);
-    });
-    document.getElementById('opt-grid').addEventListener('change', (e) => {
-      ctx.scene3d.grid.visible = e.target.checked;
-    });
-    document.getElementById('opt-physics').addEventListener('change', (e) => {
+    $('opt-axes').addEventListener('change', (e) => ctx.robot.setShowAxes(e.target.checked));
+    $('opt-trace').addEventListener('change', (e) => ctx.setTraceEnabled(e.target.checked));
+    $('btn-clear-trace').addEventListener('click', () => ctx.clearTrace());
+    $('opt-grid').addEventListener('change', (e) => { ctx.scene3d.grid.visible = e.target.checked; });
+    $('opt-physics').addEventListener('change', (e) => {
       ctx.physics.setEnabled(e.target.checked);
-      if (e.target.checked && ctx.physics.bodies.length === 0) {
-        ctx.physics.spawnDefaultBlocks();
-      }
+      if (e.target.checked && ctx.physics.bodies.length === 0) ctx.physics.spawnDefaultBlocks();
     });
-    document.getElementById('opt-floor').addEventListener('change', (e) => {
-      ctx.robot.floorClearance = e.target.checked;
-    });
-    document.getElementById('opt-selfcoll').addEventListener('change', (e) => {
-      ctx.robot.selfCollision = e.target.checked;
-    });
-    document.getElementById('btn-reset-blocks').addEventListener('click', () => {
-      ctx.physics.resetBlocks();
-      if (!ctx.physics.enabled) ctx.physics.setEnabled(true);
-      const phys = document.getElementById('opt-physics');
-      if (phys) phys.checked = ctx.physics.enabled;
-      this.refreshBlocksList();
-    });
-    document.getElementById('btn-clear-trace').addEventListener('click', () => ctx.clearTrace());
+    $('opt-floor').addEventListener('change', (e) => { ctx.robot.floorClearance = e.target.checked; });
+    $('opt-selfcoll').addEventListener('change', (e) => { ctx.robot.selfCollision = e.target.checked; });
 
-    this.elements.tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        this.elements.tabs.forEach(t => t.classList.remove('active'));
-        this.elements.tabPanels.forEach(p => p.classList.remove('active'));
-        tab.classList.add('active');
-        document.querySelector(`.tab-panel[data-panel="${tab.dataset.tab}"]`).classList.add('active');
-      });
-    });
+    this.elements.tabs.forEach(tab => tab.addEventListener('click', () => this.showTab(tab.dataset.tab)));
 
     this.elements.gizmoBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         ctx.setGizmoMode(btn.dataset.gizmo);
-        this.elements.gizmoBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+        this.elements.gizmoBtns.forEach(b => b.classList.toggle('active', b === btn));
       });
     });
 
-    document.getElementById('sim-play').addEventListener('click', () => ctx.sim.play());
-    document.getElementById('sim-pause').addEventListener('click', () => ctx.sim.pause());
-    document.getElementById('sim-step').addEventListener('click', () => ctx.sim.step());
-    document.getElementById('sim-stop').addEventListener('click', () => ctx.sim.stop());
-
-    document.getElementById('sim-dt').addEventListener('change', (e) => {
-      ctx.sim.dt = Math.max(0.001, parseFloat(e.target.value) || 0.016);
-    });
-    document.getElementById('sim-speed').addEventListener('input', (e) => {
+    $('sim-play').addEventListener('click', () => ctx.sim.play());
+    $('sim-pause').addEventListener('click', () => ctx.sim.pause());
+    $('sim-step').addEventListener('click', () => ctx.sim.step());
+    $('sim-stop').addEventListener('click', () => ctx.sim.stop());
+    $('sim-dt').addEventListener('change', (e) => { ctx.sim.dt = Math.max(0.001, parseFloat(e.target.value) || 0.016); });
+    $('sim-speed').addEventListener('input', (e) => {
       ctx.sim.speed = parseFloat(e.target.value);
-      this.elements.simSpeedVal.textContent = ctx.sim.speed.toFixed(1) + 'x';
+      this.elements.simSpeedVal.textContent = ctx.sim.speed.toFixed(1) + '×';
     });
 
-    document.getElementById('ik-solve').addEventListener('click', () => ctx.ikSolveOnce());
-    document.getElementById('ik-track').addEventListener('click', () => ctx.ikStartTracking());
-    document.getElementById('ik-stop').addEventListener('click', () => ctx.ikStopTracking());
-    document.getElementById('ik-cycle').addEventListener('click', () => ctx.ikCycleSolution());
-    document.getElementById('ik-show-target').addEventListener('change', (e) => {
-      ctx.setIKTargetVisible(e.target.checked);
+    $('ik-solve').addEventListener('click', () => ctx.ikSolveOnce());
+    this.elements.ikTrack.addEventListener('click', () => {
+      if (ctx.ikTracker.active) ctx.ikStopTracking(); else ctx.ikStartTracking();
+      this.syncIkTrack();
     });
+    $('ik-cycle').addEventListener('click', () => ctx.ikCycleSolution());
+    $('ik-show-target').addEventListener('change', (e) => ctx.setIKTargetVisible(e.target.checked));
 
-    document.getElementById('script-run').addEventListener('click', () => ctx.runScript());
-    document.getElementById('script-stop').addEventListener('click', () => ctx.stopScript());
-    document.getElementById('script-example').addEventListener('change', (e) => {
+    this.elements.scriptRun.addEventListener('click', () => {
+      if (this._scriptRunning) ctx.stopScript(); else ctx.runScript();
+    });
+    this.elements.scriptExample.addEventListener('change', async (e) => {
       const k = e.target.value;
-      if (!k) return;
-      const src = SCRIPT_EXAMPLES[k];
-      if (!src) return;
-      const area = document.getElementById('script-area');
-      const dirty = area.value.trim() && area.value !== area.defaultValue;
-      if (dirty && !confirm('Replace current script with this example?')) {
-        e.target.value = '';
+      if (!k || !SCRIPT_EXAMPLES[k]) return;
+      const area = this.elements.scriptArea;
+      const edited = area.value.trim() && area.value !== this._scriptBase;
+      if (edited && !(await ask('Replace your script with this example?', 'Replace'))) {
+        e.target.value = this._scriptKey || '';
         return;
       }
-      area.value = src;
-      e.target.value = '';
+      this._loadExample(k);
     });
 
-    document.getElementById('plot-clear').addEventListener('click', () => ctx.plot.clear());
-    document.getElementById('plot-running').addEventListener('change', (e) => {
-      ctx.plot.recording = e.target.checked;
-    });
+    $('plot-clear').addEventListener('click', () => ctx.plot.clear());
+    $('plot-running').addEventListener('change', (e) => { ctx.plot.recording = e.target.checked; });
 
-    document.getElementById('btn-new').addEventListener('click', () => {
-      if (confirm('Start a new robot? Unsaved changes will be lost.')) {
-        ctx.robot.clear();
-        ctx.onSelect(null);
-        ctx.refreshUI();
-      }
+    $('btn-new').addEventListener('click', async () => {
+      if (!(await ask('Start a new robot? Unsaved changes are lost.', 'New robot'))) return;
+      ctx.newRobot();
     });
-    document.getElementById('btn-save').addEventListener('click', () => ctx.saveJSON());
-    document.getElementById('btn-load').addEventListener('click', () => ctx.loadFromFile('json'));
-    document.getElementById('btn-export-urdf').addEventListener('click', () => ctx.exportURDF());
-    document.getElementById('btn-import-urdf').addEventListener('click', () => ctx.loadFromFile('urdf'));
-    if (this.elements.btnUploadJson) {
-      this.elements.btnUploadJson.addEventListener('click', () => {
-        ctx.loadFromFile('json', (info) => this.setDashboardStatus(`Loaded ${info.fileName}: ${info.joints} joints, ${info.endEffectors} end effectors`, false), (err) => this.setDashboardStatus(`Upload failed: ${err.message}`, true));
-      });
-    }
+    $('btn-save').addEventListener('click', () => ctx.saveJSON());
+    $('btn-load').addEventListener('click', () => ctx.loadFromFile('json'));
+    $('btn-export-urdf').addEventListener('click', () => ctx.exportURDF());
+    $('btn-import-urdf').addEventListener('click', () => ctx.loadFromFile('urdf'));
 
-    const modal = document.getElementById('help-modal');
-    document.getElementById('btn-help').addEventListener('click', () => modal.classList.remove('hidden'));
-    document.getElementById('help-close').addEventListener('click', () => modal.classList.add('hidden'));
+    // Settings popover: accent, sound, shortcuts.
+    const gear = $('btn-settings'), pop = $('settings-pop');
+    const setPop = (open) => { pop.hidden = !open; gear.setAttribute('aria-expanded', String(open)); };
+    gear.addEventListener('click', (e) => { e.stopPropagation(); setPop(pop.hidden); });
+    document.addEventListener('click', (e) => { if (!pop.hidden && !pop.contains(e.target)) setPop(false); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setPop(false); });
+
+    const modal = $('help-modal');
+    $('btn-help').addEventListener('click', () => { setPop(false); modal.classList.remove('hidden'); });
+    $('help-close').addEventListener('click', () => modal.classList.add('hidden'));
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
+  }
+
+  _gravityOn() {
+    this.ctx.physics.setEnabled(true);
+    document.getElementById('opt-physics').checked = true;
+  }
+
+  showTab(name) {
+    this.elements.tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+    this.elements.tabPanels.forEach(p => p.classList.toggle('active', p.dataset.panel === name));
+  }
+
+  _loadExample(key) {
+    const src = SCRIPT_EXAMPLES[key];
+    if (!src) return;
+    this.elements.scriptArea.value = src;
+    this.elements.scriptExample.value = key;
+    this._scriptBase = src;
+    this._scriptKey = key;
+  }
+
+  /** Put a script in the editor that isn't one of the examples. */
+  setScript(src) {
+    this.elements.scriptArea.value = src;
+    this.elements.scriptExample.value = '';
+    this._scriptBase = src;
+    this._scriptKey = '';
+  }
+
+  setScriptRunning(on) {
+    this._scriptRunning = on;
+    this.elements.scriptRun.textContent = on ? 'Stop' : 'Run';
+    this.elements.scriptRun.classList.toggle('primary', !on);
+  }
+
+  syncIkTrack() {
+    const on = !!this.ctx.ikTracker.active;
+    this.elements.ikTrack.textContent = on ? 'Stop tracking' : 'Track target';
+    this.elements.ikTrack.classList.toggle('active', on);
   }
 
   refreshAll() {
@@ -312,42 +301,31 @@ export class UI {
     this.refreshColorGrid();
     this.refreshBlocksList();
     this.refreshRobotsList();
+    this.syncIkTrack();
     this.ctx.plot.setRobot(this.ctx.robot);
-  }
-
-  setDashboardStatus(message, isError = false) {
-    if (!this.elements.robotDashboardStatus || !this.elements.robotDashboardSummary) return;
-    this.elements.robotDashboardStatus.textContent = message;
-    this.elements.robotDashboardStatus.style.color = isError ? 'var(--danger)' : 'var(--fg-dim)';
-    if (!isError) {
-      this.elements.robotDashboardSummary.textContent = 'Click Load JSON or Upload JSON again to replace the current robot.';
-    }
   }
 
   refreshRobotsList() {
     const wrap = this.elements.robotsList;
-    if (!wrap) return;
     const robots = this.ctx.robots || [];
     const activeIdx = this.ctx.activeRobotIdx ?? 0;
     wrap.innerHTML = '';
     robots.forEach((r, i) => {
+      const name = r.isUrdf ? r.name : `Arm ${i + 1}`;
       const card = document.createElement('div');
       card.className = 'robot-card' + (i === activeIdx ? ' active' : '');
-      const dof = r.joints?.length || 0;
       card.innerHTML = `
-        <span class="rb-tag">${i === activeIdx ? '●' : '○'}</span>
-        <span class="rb-name">${r.isUrdf ? escapeHtml(r.name) : `Arm ${i + 1}`}</span>
-        <span class="rb-dof">${dof} DoF</span>
-        ${robots.length > 1 ? '<button class="x" title="Remove">×</button>' : ''}
+        <span class="rb-name">${escapeHtml(name)}</span>
+        <span class="rb-dof">${r.joints?.length || 0} DoF</span>
+        ${robots.length > 1 ? `<button class="x" title="Remove ${escapeHtml(name)}" aria-label="Remove ${escapeHtml(name)}">×</button>` : '<span></span>'}
       `;
       card.addEventListener('click', (e) => {
         if (e.target.matches('button.x')) return;
         if (i !== activeIdx) this.ctx.setActiveRobot?.(i);
       });
-      const xBtn = card.querySelector('button.x');
-      if (xBtn) xBtn.addEventListener('click', (e) => {
+      card.querySelector('button.x')?.addEventListener('click', async (e) => {
         e.stopPropagation();
-        if (confirm(`Remove ${r.isUrdf ? r.name : `arm ${i + 1}`}?`)) this.ctx.removeRobot?.(i);
+        if (await ask(`Remove ${name}?`, 'Remove')) this.ctx.removeRobot?.(i);
       });
       wrap.appendChild(card);
     });
@@ -355,31 +333,28 @@ export class UI {
 
   refreshBlocksList() {
     const wrap = this.elements.blocksList;
-    if (!wrap) return;
     const bodies = this.ctx.physics?.bodies || [];
+    this._blocksSig = this._blockSignature();
     wrap.innerHTML = '';
     if (bodies.length === 0) {
-      wrap.innerHTML = '<em style="color:var(--fg-dim);font-size:11px;">No blocks. Click "+ Spawn block" or "Reset blocks".</em>';
+      wrap.innerHTML = '<p class="empty">No blocks.</p>';
       return;
     }
     bodies.forEach((body, idx) => {
       const row = document.createElement('div');
       row.className = 'block-row';
       const hex = '#' + body.mesh.material.color.getHex().toString(16).padStart(6, '0');
-      const status = body.attachedTo ? 'held' : 'free';
       row.innerHTML = `
         <span class="sw" style="background:${hex}"></span>
-        <span>Block ${idx + 1} <small style="color:var(--fg-dim)">(${status})</small></span>
-        <input type="number" step="0.01" min="0" value="${(body.mass ?? 0.05).toFixed(2)}" title="mass (kg)"/>
-        <button class="x" title="Delete">×</button>
+        <span>Block ${idx + 1}${body.attachedTo ? ' <span class="state">held</span>' : ''}</span>
+        <input type="number" step="0.01" min="0" value="${(body.mass ?? 0.05).toFixed(2)}" aria-label="Mass of block ${idx + 1} (kg)"/>
+        <button class="x" aria-label="Delete block ${idx + 1}">×</button>
       `;
-      const inp = row.querySelector('input');
-      inp.addEventListener('change', (e) => {
+      row.querySelector('input').addEventListener('change', (e) => {
         body.mass = Math.max(0, parseFloat(e.target.value) || 0);
       });
       row.querySelector('button.x').addEventListener('click', () => {
-        if (body.attachedTo) body.attachedTo.remove(body.mesh);
-        else this.ctx.physics.scene.remove(body.mesh);
+        body.mesh.removeFromParent();
         body.mesh.geometry.dispose();
         body.mesh.material.dispose();
         const i = this.ctx.physics.bodies.indexOf(body);
@@ -390,60 +365,52 @@ export class UI {
     });
   }
 
+  /** Changes whenever a block appears, disappears or is picked up / put down. */
+  _blockSignature() {
+    const bodies = this.ctx.physics?.bodies || [];
+    return bodies.map(b => (b.attachedTo ? 'h' : 'f')).join('') + bodies.length;
+  }
+
   refreshTorques() {
     const wrap = this.elements.torqueReadout;
-    if (!wrap) return;
     const rows = computeJointTorques(this.ctx.robot, this.ctx.physics);
     if (rows.length === 0) {
-      wrap.innerHTML = '<em style="color:var(--fg-dim)">No joints.</em>';
+      wrap.innerHTML = '<em>No joints</em>';
       return;
     }
-    const html = rows.map(r => {
+    wrap.innerHTML = rows.map(r => {
       const isRev = r.type === 'revolute';
       const val = isRev ? `${r.torqueNm.toFixed(2)} N·m` : `${r.axialN.toFixed(2)} N`;
-      const mag = Math.abs(isRev ? r.torqueNm : r.axialN);
-      const cls = mag > 5 ? 'val hi' : 'val';
-      return `<div class="torque-row"><span>${r.name}</span><span class="name">${isRev ? 'τ' : 'F'} (${r.axis.toUpperCase()})</span><span class="${cls}">${val}</span></div>`;
+      const hi = Math.abs(isRev ? r.torqueNm : r.axialN) > 5;
+      return `<div class="torque-row"><span>${escapeHtml(r.name)}</span><span class="name">${isRev ? 'τ' : 'F'} ${r.axis.toUpperCase()}</span><span class="val${hi ? ' hi' : ''}">${val}</span></div>`;
     }).join('');
-    wrap.innerHTML = html;
   }
 
   refreshHierarchy() {
     const robot = this.ctx.robot;
     const root = this.elements.hierarchy;
     root.innerHTML = '';
-
-    const baseEl = makeNode('• Base', 'link', 0);
-    baseEl.classList.add('base');
-    root.appendChild(baseEl);
-
-    robot.joints.forEach((j, i) => {
-      const indent = '  '.repeat(i + 1);
-      const jEl = makeNode(`${indent}<span class="badge">${j.type === 'revolute' ? 'REV' : 'PRI'} ${j.axis.toUpperCase()}</span>${j.name}`, 'joint', i);
-      jEl.dataset.idx = i;
-      if (this.ctx.selected === i) jEl.classList.add('selected');
-      jEl.addEventListener('click', () => this.ctx.onSelect(i));
-      root.appendChild(jEl);
-
-      const lEl = makeNode(`${indent}  <span class="badge">LINK</span>L${i + 1} (${j.link.length.toFixed(2)} m)`, 'link', i);
-      lEl.addEventListener('click', () => this.ctx.onSelect(i));
-      root.appendChild(lEl);
-    });
-
-    robot.endEffectors.forEach((ee, k) => {
-      const tag = k === 0 ? 'EE' : 'AUX';
-      const eEl = makeNode(`<span class="badge">${tag}</span>${ee.label || EE_LABELS[ee.type] || ee.type}`, 'ee', -1);
-      eEl.classList.add('ee');
-      root.appendChild(eEl);
-    });
-
-    function makeNode(html, cls, idx) {
+    const node = (html, cls, idx) => {
       const el = document.createElement('div');
       el.className = 'tree-node ' + cls;
       el.innerHTML = html;
       el.dataset.idx = idx;
+      root.appendChild(el);
       return el;
-    }
+    };
+
+    node('Base', 'link base', 0);
+    robot.joints.forEach((j, i) => {
+      const indent = '  '.repeat(i + 1);
+      const jEl = node(`${indent}<span class="badge">${j.type === 'revolute' ? 'REV' : 'PRI'} ${j.axis.toUpperCase()}</span>${escapeHtml(j.name)}`, 'joint', i);
+      if (this.ctx.selected === i) jEl.classList.add('selected');
+      jEl.addEventListener('click', () => this.ctx.onSelect(i));
+      node(`${indent}  <span class="badge">LINK</span>L${i + 1} ${j.link.length.toFixed(2)} m`, 'link', i)
+        .addEventListener('click', () => this.ctx.onSelect(i));
+    });
+    robot.endEffectors.forEach((ee) => {
+      node(`<span class="badge">TOOL</span>${escapeHtml(ee.label || EE_LABELS[ee.type] || ee.type)}`, 'ee', -1);
+    });
   }
 
   refreshSliders() {
@@ -451,51 +418,38 @@ export class UI {
     wrap.innerHTML = '';
     const robot = this.ctx.robot;
     robot.joints.forEach((j, i) => {
+      const unit = j.type === 'revolute' ? 'rad' : 'm';
       const row = document.createElement('div');
       row.className = 'joint-row';
-      const unit = j.type === 'revolute' ? 'rad' : 'm';
       row.innerHTML = `
         <div class="head">
-          <span>${j.name} (${j.type === 'revolute' ? 'REV' : 'PRI'} ${j.axis.toUpperCase()})</span>
+          <span>${escapeHtml(j.name)}<span class="kind">${j.type === 'revolute' ? 'revolute' : 'prismatic'} ${j.axis.toUpperCase()}</span></span>
           <span class="val" id="jv-${i}">${j.value.toFixed(3)} ${unit}</span>
         </div>
-        <input type="range" min="${j.min}" max="${j.max}" step="0.001" value="${j.value}" />
+        <input type="range" min="${j.min}" max="${j.max}" step="0.001" value="${j.value}" aria-label="${escapeHtml(j.name)}" />
         <div class="vals">
-          <input type="number" class="val-num" step="0.01" value="${j.value.toFixed(3)}" />
-          <input type="number" class="val-min" step="0.05" value="${j.min.toFixed(2)}" title="min" />
-          <input type="number" class="val-max" step="0.05" value="${j.max.toFixed(2)}" title="max" />
+          <label>value <input type="number" class="val-num" step="0.01" value="${j.value.toFixed(3)}" /></label>
+          <label>min <input type="number" class="val-min" step="0.05" value="${j.min.toFixed(2)}" /></label>
+          <label>max <input type="number" class="val-max" step="0.05" value="${j.max.toFixed(2)}" /></label>
         </div>
       `;
       const slider = row.querySelector('input[type=range]');
       const num = row.querySelector('.val-num');
-      const mn = row.querySelector('.val-min');
-      const mx = row.querySelector('.val-max');
-
-      const updateValDisplay = () => {
-        document.getElementById(`jv-${i}`).textContent = j.value.toFixed(3) + ' ' + unit;
-      };
+      const show = () => { document.getElementById(`jv-${i}`).textContent = j.value.toFixed(3) + ' ' + unit; };
 
       slider.addEventListener('input', (e) => {
         const v = parseFloat(e.target.value);
         robot.setJointValue(i, v);
         num.value = v.toFixed(3);
-        updateValDisplay();
+        show();
       });
       num.addEventListener('change', (e) => {
-        const v = parseFloat(e.target.value);
-        robot.setJointValue(i, v);
+        robot.setJointValue(i, parseFloat(e.target.value));
         slider.value = j.value;
-        updateValDisplay();
+        show();
       });
-      mn.addEventListener('change', (e) => {
-        j.min = parseFloat(e.target.value);
-        slider.min = j.min;
-      });
-      mx.addEventListener('change', (e) => {
-        j.max = parseFloat(e.target.value);
-        slider.max = j.max;
-      });
-
+      row.querySelector('.val-min').addEventListener('change', (e) => { j.min = parseFloat(e.target.value); slider.min = j.min; });
+      row.querySelector('.val-max').addEventListener('change', (e) => { j.max = parseFloat(e.target.value); slider.max = j.max; });
       wrap.appendChild(row);
     });
   }
@@ -506,72 +460,67 @@ export class UI {
     const insp = this.elements.inspector;
     if (i == null || !robot.joints[i]) {
       insp.innerHTML = '<em>No joint selected</em>';
-      this.elements.selName.textContent = 'none';
+      this.elements.selRow.hidden = true;
       return;
     }
     const j = robot.joints[i];
     this.elements.selName.textContent = j.name;
+    this.elements.selRow.hidden = false;
     if (robot.isUrdf) { this._urdfInspector(robot, j, i); return; }
-    const linkColorHex = '#' + (j.link.color ?? robot.colors.link).toString(16).padStart(6, '0');
-    const linkColorOverridden = j.link.color != null;
+    const linkColorHex = '#' + (j.link.color ?? robot.colors.link ?? DEFAULT_COLORS.link).toString(16).padStart(6, '0');
+    const sel = (v, cur) => (v === cur ? 'selected' : '');
     insp.innerHTML = `
-      <div class="field"><label>Name</label><input type="text" id="i-name" value="${escapeHtml(j.name)}" style="width:100px"/></div>
+      <div class="field"><label>Name</label><input type="text" id="i-name" value="${escapeHtml(j.name)}"/></div>
       <div class="field"><label>Type</label>
         <select id="i-type">
-          <option value="revolute" ${j.type === 'revolute' ? 'selected' : ''}>Revolute</option>
-          <option value="prismatic" ${j.type === 'prismatic' ? 'selected' : ''}>Prismatic</option>
+          <option value="revolute" ${sel('revolute', j.type)}>Revolute</option>
+          <option value="prismatic" ${sel('prismatic', j.type)}>Prismatic</option>
         </select>
       </div>
       <div class="field"><label>Axis</label>
         <select id="i-axis">
-          <option value="x" ${j.axis === 'x' ? 'selected' : ''}>X</option>
-          <option value="y" ${j.axis === 'y' ? 'selected' : ''}>Y</option>
-          <option value="z" ${j.axis === 'z' ? 'selected' : ''}>Z</option>
+          <option value="x" ${sel('x', j.axis)}>X</option>
+          <option value="y" ${sel('y', j.axis)}>Y</option>
+          <option value="z" ${sel('z', j.axis)}>Z</option>
         </select>
       </div>
       <div class="field"><label>Link length (m)</label><input type="number" step="0.05" id="i-len" value="${j.link.length.toFixed(3)}"/></div>
       <div class="field"><label>Link radius (m)</label><input type="number" step="0.005" id="i-rad" value="${j.link.radius.toFixed(3)}"/></div>
-      <div class="field"><label>Link extends</label>
+      <div class="field"><label>Link direction</label>
         <select id="i-link-axis">
-          <option value="+y" ${(j.link.axis||'+y') === '+y' ? 'selected' : ''}>+Y (up)</option>
-          <option value="-y" ${j.link.axis === '-y' ? 'selected' : ''}>−Y (down)</option>
-          <option value="+x" ${j.link.axis === '+x' ? 'selected' : ''}>+X</option>
-          <option value="-x" ${j.link.axis === '-x' ? 'selected' : ''}>−X</option>
-          <option value="+z" ${j.link.axis === '+z' ? 'selected' : ''}>+Z</option>
-          <option value="-z" ${j.link.axis === '-z' ? 'selected' : ''}>−Z</option>
+          <option value="+y" ${sel('+y', j.link.axis || '+y')}>+Y (up)</option>
+          <option value="-y" ${sel('-y', j.link.axis)}>−Y (down)</option>
+          <option value="+x" ${sel('+x', j.link.axis)}>+X</option>
+          <option value="-x" ${sel('-x', j.link.axis)}>−X</option>
+          <option value="+z" ${sel('+z', j.link.axis)}>+Z</option>
+          <option value="-z" ${sel('-z', j.link.axis)}>−Z</option>
         </select>
       </div>
       <div class="field"><label>Link color</label>
-        <span style="display:inline-flex;gap:4px;align-items:center;">
+        <span class="inline">
           <input type="color" id="i-link-color" value="${linkColorHex}"/>
-          <button id="i-link-color-clear" title="Use global link color">${linkColorOverridden ? 'reset' : '—'}</button>
+          <button id="i-link-color-clear" class="text-btn" ${j.link.color != null ? '' : 'disabled'}>Reset</button>
         </span>
       </div>
-      <div class="field"><label>Min</label><input type="number" step="0.05" id="i-min" value="${j.min.toFixed(3)}"/></div>
-      <div class="field"><label>Max</label><input type="number" step="0.05" id="i-max" value="${j.max.toFixed(3)}"/></div>
-      <div class="field"><label>Value</label><input type="number" step="0.01" id="i-val" value="${j.value.toFixed(3)}"/></div>
-      <div class="field"><button id="i-delete" class="danger">Delete (and chain after)</button></div>
+      <div class="field"><label>Min (${j.type === 'revolute' ? 'rad' : 'm'})</label><input type="number" step="0.05" id="i-min" value="${j.min.toFixed(3)}"/></div>
+      <div class="field"><label>Max (${j.type === 'revolute' ? 'rad' : 'm'})</label><input type="number" step="0.05" id="i-max" value="${j.max.toFixed(3)}"/></div>
+      <div class="field"><label>Value (${j.type === 'revolute' ? 'rad' : 'm'})</label><input type="number" step="0.01" id="i-val" value="${j.value.toFixed(3)}"/></div>
+      <div class="field"><span></span><button id="i-delete" class="danger" title="Also deletes the joints after it">Delete joint</button></div>
     `;
 
-    insp.querySelector('#i-name').addEventListener('change', (e) => { j.name = e.target.value; this.refreshHierarchy(); this.refreshSliders(); });
-    insp.querySelector('#i-type').addEventListener('change', (e) => { j.type = e.target.value; robot.rebuildJointGeometry(j); this.refreshHierarchy(); this.refreshSliders(); });
-    insp.querySelector('#i-axis').addEventListener('change', (e) => { j.axis = e.target.value; robot.rebuildJointGeometry(j); this.refreshHierarchy(); });
-    insp.querySelector('#i-len').addEventListener('change', (e) => { j.link.length = parseFloat(e.target.value); robot.rebuildJointGeometry(j); this.refreshHierarchy(); });
-    insp.querySelector('#i-rad').addEventListener('change', (e) => { j.link.radius = parseFloat(e.target.value); robot.rebuildJointGeometry(j); });
-    insp.querySelector('#i-link-axis').addEventListener('change', (e) => { j.link.axis = e.target.value; robot.rebuildJointGeometry(j); this.refreshHierarchy(); });
-    insp.querySelector('#i-link-color').addEventListener('input', (e) => {
-      j.link.color = parseInt(e.target.value.slice(1), 16);
-      robot.rebuildJointGeometry(j);
-    });
-    insp.querySelector('#i-link-color-clear').addEventListener('click', () => {
-      j.link.color = null;
-      robot.rebuildJointGeometry(j);
-      this.refreshInspector();
-    });
-    insp.querySelector('#i-min').addEventListener('change', (e) => { j.min = parseFloat(e.target.value); this.refreshSliders(); });
-    insp.querySelector('#i-max').addEventListener('change', (e) => { j.max = parseFloat(e.target.value); this.refreshSliders(); });
-    insp.querySelector('#i-val').addEventListener('change', (e) => { robot.setJointValue(i, parseFloat(e.target.value)); this.refreshSliders(); });
-    insp.querySelector('#i-delete').addEventListener('click', () => {
+    const on = (id, ev, fn) => insp.querySelector(id).addEventListener(ev, fn);
+    on('#i-name', 'change', (e) => { j.name = e.target.value; this.refreshHierarchy(); this.refreshSliders(); });
+    on('#i-type', 'change', (e) => { j.type = e.target.value; robot.rebuildJointGeometry(j); this.refreshHierarchy(); this.refreshSliders(); });
+    on('#i-axis', 'change', (e) => { j.axis = e.target.value; robot.rebuildJointGeometry(j); this.refreshHierarchy(); });
+    on('#i-len', 'change', (e) => { j.link.length = parseFloat(e.target.value); robot.rebuildJointGeometry(j); this.refreshHierarchy(); });
+    on('#i-rad', 'change', (e) => { j.link.radius = parseFloat(e.target.value); robot.rebuildJointGeometry(j); });
+    on('#i-link-axis', 'change', (e) => { j.link.axis = e.target.value; robot.rebuildJointGeometry(j); this.refreshHierarchy(); });
+    on('#i-link-color', 'input', (e) => { j.link.color = parseInt(e.target.value.slice(1), 16); robot.rebuildJointGeometry(j); insp.querySelector('#i-link-color-clear').disabled = false; });
+    on('#i-link-color-clear', 'click', () => { j.link.color = null; robot.rebuildJointGeometry(j); this.refreshInspector(); });
+    on('#i-min', 'change', (e) => { j.min = parseFloat(e.target.value); this.refreshSliders(); });
+    on('#i-max', 'change', (e) => { j.max = parseFloat(e.target.value); this.refreshSliders(); });
+    on('#i-val', 'change', (e) => { robot.setJointValue(i, parseFloat(e.target.value)); this.refreshSliders(); });
+    on('#i-delete', 'click', () => {
       robot.removeJoint(j.id);
       this.ctx.onSelect(null);
       this.refreshAll();
@@ -581,60 +530,51 @@ export class UI {
   /** Inspector for a joint of an imported robot: its shape comes from the URDF, so only limits and value are editable. */
   _urdfInspector(robot, j, i) {
     const insp = this.elements.inspector;
-    const deg = (r) => (r * 180 / Math.PI).toFixed(1);
     const unit = j.type === 'revolute' ? 'rad' : 'm';
     const ax = j.axisVec.toArray().map(v => +v.toFixed(3)).join(' ');
     const linkColorHex = '#' + (j.link.color ?? robot.colors.link ?? 0xb9bcc1).toString(16).padStart(6, '0');
+    const role = j.role === 'arm' ? '' : j.role === 'gripper' ? ', gripper' : ', not used by IK';
     insp.innerHTML = `
-      <div class="field"><label>Name</label><input type="text" id="i-name" value="${escapeHtml(j.name)}" style="width:110px"/></div>
-      <div class="field"><label>URDF joint</label><span>${escapeHtml(j.urdfName)}</span></div>
-      <div class="field"><label>Type</label><span>${j.urdfType}${j.role === 'arm' ? '' : ` (${j.role === 'gripper' ? 'gripper' : 'not used by IK'})`}</span></div>
-      <div class="field"><label>Axis</label><span>${ax}</span></div>
-      <div class="field"><label>Moves link</label><span>${(j.link.length * 100).toFixed(1)} cm to the next joint</span></div>
+      <div class="field"><label>Name</label><input type="text" id="i-name" value="${escapeHtml(j.name)}"/></div>
+      <div class="field"><label>URDF joint</label><span class="num">${escapeHtml(j.urdfName)}</span></div>
+      <div class="field"><label>Type</label><span>${j.urdfType}${role}</span></div>
+      <div class="field"><label>Axis</label><span class="num">${ax}</span></div>
+      <div class="field"><label>To next joint</label><span class="num">${(j.link.length * 100).toFixed(1)} cm</span></div>
       <div class="field"><label>Link color</label>
-        <span style="display:inline-flex;gap:4px;align-items:center;">
+        <span class="inline">
           <input type="color" id="i-link-color" value="${linkColorHex}"/>
-          <button id="i-link-color-clear">${j.link.color != null ? 'reset' : '—'}</button>
+          <button id="i-link-color-clear" class="text-btn" ${j.link.color != null ? '' : 'disabled'}>Reset</button>
         </span>
       </div>
       <div class="field"><label>Min (${unit})</label><input type="number" step="0.05" id="i-min" value="${j.min.toFixed(3)}"/></div>
       <div class="field"><label>Max (${unit})</label><input type="number" step="0.05" id="i-max" value="${j.max.toFixed(3)}"/></div>
       <div class="field"><label>Value (${unit})</label><input type="number" step="0.01" id="i-val" value="${j.value.toFixed(3)}"/></div>
-      ${j.type === 'revolute' ? `<div class="field"><label></label><span>${deg(j.value)}° (limits ${deg(j.min)}° to ${deg(j.max)}°)</span></div>` : ''}
-      <p class="hint">Index ${i} in scripts: <code>setJoint(${i}, value)</code>.</p>
     `;
-    insp.querySelector('#i-name').addEventListener('change', (e) => { j.name = e.target.value; this.refreshHierarchy(); this.refreshSliders(); });
-    insp.querySelector('#i-link-color').addEventListener('input', (e) => { j.link.color = parseInt(e.target.value.slice(1), 16); robot.rebuildJointGeometry(j); });
-    insp.querySelector('#i-link-color-clear').addEventListener('click', () => { j.link.color = null; robot.rebuildJointGeometry(j); this._urdfInspector(robot, j, i); });
-    insp.querySelector('#i-min').addEventListener('change', (e) => { j.min = parseFloat(e.target.value); this.refreshSliders(); });
-    insp.querySelector('#i-max').addEventListener('change', (e) => { j.max = parseFloat(e.target.value); this.refreshSliders(); });
-    insp.querySelector('#i-val').addEventListener('change', (e) => { robot.setJointValue(i, parseFloat(e.target.value)); this.refreshSliders(); });
+    const on = (id, ev, fn) => insp.querySelector(id).addEventListener(ev, fn);
+    on('#i-name', 'change', (e) => { j.name = e.target.value; this.refreshHierarchy(); this.refreshSliders(); });
+    on('#i-link-color', 'input', (e) => { j.link.color = parseInt(e.target.value.slice(1), 16); robot.rebuildJointGeometry(j); insp.querySelector('#i-link-color-clear').disabled = false; });
+    on('#i-link-color-clear', 'click', () => { j.link.color = null; robot.rebuildJointGeometry(j); this._urdfInspector(robot, j, i); });
+    on('#i-min', 'change', (e) => { j.min = parseFloat(e.target.value); this.refreshSliders(); });
+    on('#i-max', 'change', (e) => { j.max = parseFloat(e.target.value); this.refreshSliders(); });
+    on('#i-val', 'change', (e) => { robot.setJointValue(i, parseFloat(e.target.value)); this.refreshSliders(); });
   }
 
   refreshEEList() {
     const robot = this.ctx.robot;
     const wrap = this.elements.eeList;
     wrap.innerHTML = '';
-    if (robot.endEffectors.length === 0) {
-      wrap.innerHTML = '<em style="color:var(--fg-dim);font-size:11px;">No tools mounted.</em>';
-      return;
-    }
-
     robot.endEffectors.forEach((ee, idx) => {
       const card = document.createElement('div');
       card.className = 'ee-card';
-      const isPrimary = idx === 0;
-      const label = ee.label || EE_LABELS[ee.type] || ee.type;
       card.innerHTML = `
         <div class="ee-head">
-          <span class="ee-title">${isPrimary ? '<span class="pri-badge">PRIMARY</span>' : '<span class="pri-badge" style="background:#3a2c1c;color:#ffd5a8;">AUX</span>'} ${label}</span>
-          <button class="x" data-idx="${idx}">remove</button>
+          <span class="ee-title">${escapeHtml(ee.label || EE_LABELS[ee.type] || ee.type)}${idx === 0 ? ' <span class="pri-badge">Primary</span>' : ''}</span>
+          <button class="text-btn">Remove</button>
         </div>
-        <div class="ee-body" data-body></div>
+        <div class="ee-body"></div>
       `;
-      const body = card.querySelector('[data-body]');
-      this._renderEEControls(ee, body);
-      card.querySelector('button.x').addEventListener('click', () => {
+      this._renderEEControls(ee, card.querySelector('.ee-body'));
+      card.querySelector('.ee-head button').addEventListener('click', () => {
         robot.removeEndEffector(idx);
         this.refreshEEList();
         this.refreshHierarchy();
@@ -645,39 +585,36 @@ export class UI {
 
   _renderEEControls(ee, wrap) {
     const physics = this.ctx.physics;
+    const check = (attr, checked, label) => `<label><input type="checkbox" ${attr} ${checked ? 'checked' : ''}/> ${label}</label>`;
     if (ee.type === 'gripper' || ee.type === 'gripper3') {
-      wrap.innerHTML = `<label>Open <input type="range" min="0" max="1" step="0.01" value="${ee.params.open}"/> <span class="ov">${ee.params.open.toFixed(2)}</span></label>`;
-      const r = wrap.querySelector('input');
-      const ov = wrap.querySelector('.ov');
-      r.addEventListener('input', (e) => { ee.setParam('open', e.target.value); ov.textContent = (+e.target.value).toFixed(2); });
-    } else if (ee.type === 'suction') {
-      wrap.innerHTML = `<label><input type="checkbox" data-suct ${ee.params.suction ? 'checked' : ''}/> Suction on</label>`;
-      wrap.querySelector('[data-suct]').addEventListener('change', (e) => {
-        ee.setParam('suction', e.target.checked);
-        if (e.target.checked) physics.tryGrab(ee.tip);
-        else physics.release(ee.tip);
+      wrap.innerHTML = `<div class="field-row slider-row"><span>Open</span><input type="range" min="0" max="1" step="0.01" value="${ee.params.open}"/><output class="num">${Math.round(ee.params.open * 100)}%</output></div>`;
+      const out = wrap.querySelector('output');
+      wrap.querySelector('input').addEventListener('input', (e) => {
+        ee.setParam('open', e.target.value);
+        out.textContent = Math.round(e.target.value * 100) + '%';
       });
+    } else if (ee.type === 'suction') {
+      wrap.innerHTML = check('data-suct', ee.params.suction, 'Suction');
+      wrap.querySelector('[data-suct]').addEventListener('change', (e) => ee.setParam('suction', e.target.checked));
     } else if (ee.type === 'welder') {
-      wrap.innerHTML = `<label><input type="checkbox" data-w ${ee.params.welding ? 'checked' : ''}/> Welding on</label>`;
+      wrap.innerHTML = check('data-w', ee.params.welding, 'Welding');
       wrap.querySelector('[data-w]').addEventListener('change', (e) => ee.setParam('welding', e.target.checked));
     } else if (ee.type === 'camera') {
-      wrap.innerHTML = `<label><input type="checkbox" data-f ${ee.params.showFrustum ? 'checked' : ''}/> Show sensor frustum</label>
-        <label><input type="checkbox" data-detect ${ee.params.detect ? 'checked' : ''}/> Highlight detected blocks</label>
-        <div class="row" style="gap:4px;flex-wrap:wrap;">
-          <button data-scan>Scan now</button>
-          <button data-grab-orange title="Sweep, find an orange block, and pick it up">Find &amp; grab orange</button>
-          <button data-stop-task title="Cancel the running camera task">Stop</button>
+      wrap.innerHTML = `${check('data-f', ee.params.showFrustum, 'Show field of view')}
+        ${check('data-detect', ee.params.detect, 'Highlight what it sees')}
+        <div class="row">
+          <button data-scan>Scan</button>
+          <button data-grab-orange>Find the orange block</button>
         </div>
-        <div class="ee-detect-info" style="font-size:11px;color:var(--fg-dim);margin-top:4px;">No scan yet.</div>`;
-      const info = wrap.querySelector('.ee-detect-info');
+        <div class="ee-info"></div>`;
+      const info = wrap.querySelector('.ee-info');
       const runScan = () => {
         const hits = physics.scanBlocks(ee.tip, { fov: Math.PI / 3, range: 2.5 });
-
         for (const b of physics.bodies) physics.setBlockHighlight(b, false);
         if (ee.params.detect) for (const h of hits) physics.setBlockHighlight(h.body, true);
         info.textContent = hits.length === 0
-          ? 'No blocks visible.'
-          : `${hits.length} visible — closest ${hits[0].distance.toFixed(2)} m`;
+          ? 'Nothing in view.'
+          : `${hits.length} in view, closest ${hits[0].distance.toFixed(2)} m`;
         return hits;
       };
       wrap.querySelector('[data-f]').addEventListener('change', (e) => ee.setParam('showFrustum', e.target.checked));
@@ -687,12 +624,7 @@ export class UI {
         else runScan();
       });
       wrap.querySelector('[data-scan]').addEventListener('click', runScan);
-      wrap.querySelector('[data-grab-orange]').addEventListener('click', () => {
-        this.ctx.runScriptText(SCRIPT_EXAMPLES.grabOrange);
-      });
-      wrap.querySelector('[data-stop-task]').addEventListener('click', () => {
-        this.ctx.stopScript();
-      });
+      wrap.querySelector('[data-grab-orange]').addEventListener('click', () => this.ctx.runScriptText(SCRIPT_EXAMPLES.grabOrange));
 
       if (ee._cameraTickHandle) clearInterval(ee._cameraTickHandle);
       ee._cameraTickHandle = setInterval(() => { if (ee.params.detect) runScan(); }, 250);
@@ -706,42 +638,27 @@ export class UI {
         ee._cameraDisposeWrapped = true;
       }
     } else if (ee.type === 'drill') {
-      wrap.innerHTML = `<label><input type="checkbox" data-s ${ee.params.spinning ? 'checked' : ''}/> Spinning</label>
-        <label>RPM <input type="number" data-rpm step="50" value="${ee.params.rpm}" style="width:70px"/></label>`;
+      wrap.innerHTML = `${check('data-s', ee.params.spinning, 'Spinning')}
+        <label>Speed (rpm) <input type="number" data-rpm step="50" value="${ee.params.rpm}"/></label>`;
       wrap.querySelector('[data-s]').addEventListener('change', (e) => ee.setParam('spinning', e.target.checked));
       wrap.querySelector('[data-rpm]').addEventListener('change', (e) => ee.setParam('rpm', e.target.value));
     } else if (ee.type === 'magnet') {
-      wrap.innerHTML = `<label><input type="checkbox" data-e ${ee.params.energized ? 'checked' : ''}/> Energized</label>`;
-      wrap.querySelector('[data-e]').addEventListener('change', (e) => {
-        ee.setParam('energized', e.target.checked);
-        if (e.target.checked) physics.tryGrab(ee.tip);
-        else physics.release(ee.tip);
-      });
+      wrap.innerHTML = check('data-e', ee.params.energized, 'On');
+      wrap.querySelector('[data-e]').addEventListener('change', (e) => ee.setParam('energized', e.target.checked));
     } else if (ee.type === 'laser') {
-      wrap.innerHTML = `<label><input type="checkbox" data-fire ${ee.params.firing ? 'checked' : ''}/> Firing</label>`;
+      wrap.innerHTML = check('data-fire', ee.params.firing, 'Firing');
       wrap.querySelector('[data-fire]').addEventListener('change', (e) => ee.setParam('firing', e.target.checked));
     } else if (ee.type === 'paint') {
       const colorHex = '#' + (ee.params.color || 0xffffff).toString(16).padStart(6, '0');
-      wrap.innerHTML = `<label><input type="checkbox" data-spray ${ee.params.spraying ? 'checked' : ''}/> Spraying</label>
+      wrap.innerHTML = `${check('data-spray', ee.params.spraying, 'Spraying')}
         <label>Color <input type="color" data-color value="${colorHex}"/></label>`;
       wrap.querySelector('[data-spray]').addEventListener('change', (e) => ee.setParam('spraying', e.target.checked));
       wrap.querySelector('[data-color]').addEventListener('input', (e) => ee.setParam('color', parseInt(e.target.value.slice(1), 16)));
     }
-
-    if (ee.tip) {
-      const row = document.createElement('div');
-      row.className = 'row';
-      row.style.marginTop = '4px';
-      row.innerHTML = `<button data-univ-grab>Grab nearest</button>
-        <button data-univ-release>Drop</button>`;
-      row.querySelector('[data-univ-grab]').addEventListener('click', () => physics.tryGrab(ee.tip));
-      row.querySelector('[data-univ-release]').addEventListener('click', () => physics.release(ee.tip));
-      wrap.appendChild(row);
-    }
   }
 
   tickReadouts(eeWorld, simTime) {
-    this.elements.eePos.textContent = `(${eeWorld.x.toFixed(2)}, ${eeWorld.y.toFixed(2)}, ${eeWorld.z.toFixed(2)})`;
+    this.elements.eePos.textContent = `${eeWorld.x.toFixed(2)}, ${eeWorld.y.toFixed(2)}, ${eeWorld.z.toFixed(2)} m`;
     this.elements.simTime.textContent = simTime.toFixed(2);
 
     const robot = this.ctx.robot;
@@ -756,12 +673,14 @@ export class UI {
     this._readoutTick = (this._readoutTick || 0) + 1;
     if (this._readoutTick % 12 === 0) {
       this.refreshTorques();
+      if (this._blockSignature() !== this._blocksSig) this.refreshBlocksList();
+      if (!!this.ctx.ikTracker.active !== (this.elements.ikTrack.textContent === 'Stop tracking')) this.syncIkTrack();
     }
   }
 }
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, ch => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   }[ch]));
 }

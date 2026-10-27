@@ -36,8 +36,7 @@ spawnBox(position = new THREE.Vector3(0.5, 0.05, 0.0), size = 0.06, color = 0xff
 
   removeAll() {
     for (const b of this.bodies) {
-      if (b.attachedTo) b.attachedTo.remove(b.mesh);
-      else this.scene.remove(b.mesh);
+      b.mesh.removeFromParent();      // held by a tool, riding the belt, or loose
       b.mesh.geometry.dispose();
       b.mesh.material.dispose();
     }

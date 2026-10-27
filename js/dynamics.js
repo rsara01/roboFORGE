@@ -1,12 +1,4 @@
-
-/**
- * ╔══════════════════════════════════════════════════════════════╗
- * ║ RoboForge - Robot Dynamics & Torque Calculations            ║
- * ║ Created by: Rishik Saravanan                                ║
- * ║ Birthday: May 25th                                          ║
- * ║ © 2024-2026. All rights reserved.                           ║
- * ╚══════════════════════════════════════════════════════════════╝
- */
+// RoboForge, (c) 2024-2026 Rishik Saravanan
 
 import * as THREE from 'three';
 import { AXIS_VECTOR } from './robot.js';

@@ -6,8 +6,7 @@ const DEFAULT = {
   accent: '#f08327',
   accent2: '#f08327',
 };
-// The old purple defaults. Saved themes still holding them were never really
-// chosen by anyone, so they fall back to the current default.
+// Migrate the old default.
 const RETIRED = ['#667eea', '#764ba2'];
 
 function hexToRgb(hex) {

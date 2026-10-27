@@ -8,7 +8,7 @@
  * is in it; opening lets go. The fingers stop where they touch the object.
  */
 
-/** How far (beyond its half-size) an object's centre may be from the grip zone (grip point to fingertips) and still be caught. */
+/** How far (beyond its half-size) an object's center may be from the grip zone (grip point to fingertips) and still be caught. */
 const CATCH = 0.02;
 
 export const gripPoint = (ee) => ee?.grasp || ee?.tip || null;

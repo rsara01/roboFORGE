@@ -1,12 +1,4 @@
-
-/**
- * ╔══════════════════════════════════════════════════════════════╗
- * ║ RoboForge - Inverse Kinematics Solver                       ║
- * ║ Created by: Rishik Saravanan                                ║
- * ║ Birthday: May 25th                                          ║
- * ║ © 2024-2026. All rights reserved.                           ║
- * ╚══════════════════════════════════════════════════════════════╝
- */
+// RoboForge, (c) 2024-2026 Rishik Saravanan
 
 import * as THREE from 'three';
 import { AXIS_VECTOR } from './robot.js';
@@ -128,7 +120,7 @@ function _solvePrismatic(j, robot, target) {
   }
 }
 
-/** True if every joint value in a/b is within `eps` radians/metres of the other. */
+/** True if every joint value in a/b is within `eps` radians/meters of the other. */
 function _posesClose(a, b, eps = 0.05) {
   for (let i = 0; i < a.length; i++) {
     if (Math.abs(a[i] - b[i]) > eps) return false;

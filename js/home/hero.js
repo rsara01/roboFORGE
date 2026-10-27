@@ -13,7 +13,7 @@ const READY_POSE = [0.55, 0.7, 1.25, 0, 0.85, 0];
 const IDLE_AFTER = 3.5;          // seconds without input before it entertains itself
 const REACH = 0.8;               // m, kept a little inside the arm's real reach
 
-/** Arm colours that read on both the light and dark viewport. */
+/** Arm colors that read on both the light and dark viewport. */
 const ARM_COLORS = {
   link: 0xd9d6cf, linkDark: 0x8d897f,
   revolute: 0x2c2d31, revoluteDark: 0x1d1e21,

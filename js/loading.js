@@ -17,20 +17,12 @@ function injectStyles() {
       z-index: 99999;
       transition: opacity 0.35s ease, visibility 0.35s ease;
       color: white;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: "IBM Plex Sans", system-ui, sans-serif;
     }
     #rf-loading.gone { opacity: 0; visibility: hidden; pointer-events: none; }
-    #rf-loading .logo-wrap {
-      width: 120px; height: 120px;
-      background: rgba(255,255,255,0.92);
-      border-radius: 22px;
-      box-shadow: 0 14px 40px rgba(0,0,0,0.3);
-      padding: 10px;
-      display: flex; align-items: center; justify-content: center;
-      animation: rfPulse 1.6s ease-in-out infinite;
-    }
-    #rf-loading .logo-wrap img { width: 100%; height: 100%; object-fit: contain; }
-    #rf-loading .label { font-size: 14px; letter-spacing: 0.6px; opacity: 0.9; }
+    #rf-loading .logo-wrap { width: 64px; height: 64px; animation: rfPulse 1.6s ease-in-out infinite; }
+    #rf-loading .logo-wrap img { width: 100%; height: 100%; object-fit: contain; filter: invert(1); }
+    #rf-loading .label { font-size: 14px; opacity: 0.85; }
     #rf-loading .bar {
       width: 200px; height: 4px;
       background: rgba(255,255,255,0.22);
@@ -38,7 +30,7 @@ function injectStyles() {
     }
     #rf-loading .bar > i {
       display: block; height: 100%; width: 40%;
-      background: #f08327;
+      background: var(--accent, #f08327);
       animation: rfSlide 1.1s ease-in-out infinite;
     }
     @keyframes rfPulse {
@@ -59,7 +51,7 @@ function build(label) {
   el.id = 'rf-loading';
   el.innerHTML = `
     <div class="logo-wrap"><img src="assets/logo-mark.svg" alt="RoboForge" /></div>
-    <div class="label">${label || 'Loading simulator…'}</div>
+    <div class="label">${label || 'Loading'}</div>
     <div class="bar"><i></i></div>
   `;
   document.body.appendChild(el);

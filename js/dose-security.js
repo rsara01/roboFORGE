@@ -1,11 +1,4 @@
-/**
- * ╔══════════════════════════════════════════════════════════════╗
- * ║ RoboForge - Dose Robot Simulator                            ║
- * ║ Created by: Rishik Saravanan                                ║
- * ║ Birthday: May 25th                                          ║
- * ║ © 2024-2026. All rights reserved.                           ║
- * ╚══════════════════════════════════════════════════════════════╝
- */
+// RoboForge, (c) 2024-2026 Rishik Saravanan
 
 /**
  * Security module for DOSE simulator access control

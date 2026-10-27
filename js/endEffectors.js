@@ -172,7 +172,7 @@ function makeSuction() {
   const tip = new THREE.Object3D();
   tip.position.y = 0.13;
   group.add(tip);
-  const grasp = new THREE.Object3D();   // centre of the cup's face
+  const grasp = new THREE.Object3D();   // center of the cup's face
   grasp.position.y = 0.12;
   group.add(grasp);
 
@@ -410,7 +410,7 @@ function makeMagnet() {
   const tip = new THREE.Object3D();
   tip.position.y = 0.12;
   group.add(tip);
-  const grasp = new THREE.Object3D();   // centre of the pole faces
+  const grasp = new THREE.Object3D();   // center of the pole faces
   grasp.position.y = 0.11;
   group.add(grasp);
 

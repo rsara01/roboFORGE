@@ -5,8 +5,8 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js';
 
 export function createScene(container) {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0a0d12);
-  scene.fog = new THREE.Fog(0x0a0d12, 8, 40);
+  scene.background = new THREE.Color(0x111214);
+  scene.fog = new THREE.Fog(0x111214, 8, 40);
 
 const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 200);
   camera.position.set(2.2, 1.8, 2.6);
@@ -36,7 +36,7 @@ let lastW = 0, lastH = 0;
   }
   resize();
 
-const hemi = new THREE.HemisphereLight(0xbfd6ff, 0x202028, 0.55);
+const hemi = new THREE.HemisphereLight(0xe8e4dc, 0x222224, 0.6);
   scene.add(hemi);
 
   const sun = new THREE.DirectionalLight(0xffffff, 1.1);
@@ -51,13 +51,13 @@ const hemi = new THREE.HemisphereLight(0xbfd6ff, 0x202028, 0.55);
   sun.shadow.camera.far = 20;
   scene.add(sun);
 
-  const fill = new THREE.DirectionalLight(0x88aaff, 0.25);
+  const fill = new THREE.DirectionalLight(0xd8d4cc, 0.25);
   fill.position.set(-3, 2, -2);
   scene.add(fill);
 
 const groundGeo = new THREE.PlaneGeometry(20, 20);
   const groundMat = new THREE.MeshStandardMaterial({
-    color: 0x1a2030, roughness: 0.95, metalness: 0.0,
+    color: 0x1c1d20, roughness: 0.95, metalness: 0.0,
   });
   const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.rotation.x = -Math.PI / 2;
@@ -65,7 +65,7 @@ const groundGeo = new THREE.PlaneGeometry(20, 20);
   ground.name = 'ground';
   scene.add(ground);
 
-const grid = new THREE.GridHelper(20, 40, 0x3a4a60, 0x222a36);
+const grid = new THREE.GridHelper(20, 40, 0x3a3b40, 0x2a2b2f);
   grid.position.y = 0.001;
   grid.name = 'grid';
   scene.add(grid);
