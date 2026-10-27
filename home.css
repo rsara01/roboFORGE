@@ -148,22 +148,6 @@
   .robot-row { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* ---------- lab notebook ---------- */
-
-.notebook { padding-top: 40px; padding-bottom: 96px; }
-.notebook h2 { margin-bottom: 10px; }
-.notebook > p { margin-bottom: 26px; }
-.log { list-style: none; margin: 0; padding: 0; max-width: 820px; border-top: 1px solid var(--line); }
-.log li {
-  display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 4px 24px;
-  padding: 14px 0; border-bottom: 1px solid var(--line);
-}
-.log time { font: 400 14px/1.8 var(--mono); color: var(--ink-3); font-variant-numeric: tabular-nums; }
-.log p { margin: 0; }
-@media (max-width: 560px) {
-  .log li { grid-template-columns: minmax(0, 1fr); }
-}
-
 /* ---------- why ---------- */
 
 .why { padding-top: 24px; padding-bottom: 64px; }

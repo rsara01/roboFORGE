@@ -51,9 +51,8 @@
     <div>
       <h1 id="hero-title">Build a robot arm and teach it to pick things up.</h1>
       <p class="lede">
-        This one's running the same inverse kinematics code as the full simulator.
-        Move your mouse over it and it reaches for your cursor. On a phone, tap where
-        you want it to go.
+        This arm runs the same inverse kinematics code as the full simulator. Move your
+        mouse over it (or tap, on a phone) and it reaches for that spot.
       </p>
       <div class="hero-actions">
         <a class="btn" href="arm.html?action=new" data-action="arm">Open the Arm Lab</a>
@@ -72,15 +71,9 @@
     <div class="text">
       <h2 id="reach-title">How does it know where to reach?</h2>
       <p>
-        It doesn't, at first. It guesses. It takes the joint closest to the tip and
-        turns it until the tip points at the target. Then it moves one joint back and
-        does the same thing, all the way to the shoulder, and starts over. After a few
-        passes the tip lands within a few millimeters.
-      </p>
-      <p>
-        That's called cyclic coordinate descent, or CCD, and in RoboForge it's under
-        100 lines of JavaScript. Drag the orange dot. The faint lines are the arm's
-        earlier guesses, so you can watch it get closer.
+        It turns one joint at a time, tip to shoulder, so the tip points at the target,
+        and repeats until it's within a few millimeters. Drag the orange dot and the faint
+        lines show its earlier guesses.
       </p>
     </div>
     <figure class="toy" style="margin:0">
@@ -98,10 +91,8 @@
     <div class="text">
       <h2 id="code-title">Or just tell it what to do.</h2>
       <p>
-        The Arm Lab has a Script tab that runs plain JavaScript, and these are real
-        commands from it. <code>ikTo(x, y, z)</code> moves the middle of the gripper to a
-        point (in meters). Closing the jaws with <code>gripper(0)</code> picks up whatever
-        is between them, and opening them lets go.
+        The Arm Lab's Script tab runs plain JavaScript like this. <code>ikTo(x, y, z)</code>
+        moves the gripper to a point in meters, and <code>gripper(0)</code> closes it on whatever is there.
       </p>
     </div>
     <div class="editor">
@@ -125,15 +116,12 @@ gripper(1)                    // open: let go</textarea>
   </section>
 
   <section class="wrap lab" aria-label="Screenshots of the Arm Lab">
-    <p class="lede">Everything else is in the Arm Lab. These are screenshots of it, not mockups.</p>
+    <p class="lede">Real screenshots of the Arm Lab.</p>
     <div class="shots">
       <figure>
         <img src="assets/shots/arm-rs.jpg" width="1600" height="1000" loading="lazy"
           alt="The Arm Lab showing the reBot B601 arm in green and black, with the joint sliders on the right.">
-        <figcaption>
-          The reBot B601. I converted its STEP file into seven meshes (452,685 triangles,
-          7.8 MB) so the arm on screen has the same shape as the real one.
-        </figcaption>
+        <figcaption>The reBot B601, converted from its CAD file into 452,685 triangles.</figcaption>
       </figure>
       <figure>
         <img src="assets/shots/arm-script.jpg" width="1600" height="1000" loading="lazy"
@@ -143,7 +131,7 @@ gripper(1)                    // open: let go</textarea>
       <figure>
         <img src="assets/shots/arm-record.jpg" width="1600" height="1000" loading="lazy"
           alt="The Record tab, with buttons to record motion and export it as JSON or an Arduino sketch.">
-        <figcaption>Record a motion, then export it as an Arduino sketch that plays it back on real stepper motors.</figcaption>
+        <figcaption>Record a motion and export it as an Arduino sketch for real stepper motors.</figcaption>
       </figure>
     </div>
   </section>
@@ -156,9 +144,8 @@ gripper(1)                    // open: let go</textarea>
       <div>
         <h3>Drone</h3>
         <p>
-          A quadcopter in a city full of buildings it can crash into. Fly it with the
-          keyboard, record waypoints, tune its PID loops, then export the mission as a
-          Python script for DroneKit.
+          A quadcopter in a city you can crash it into. Fly it, tune its PID loops, and
+          export the mission as a DroneKit script.
         </p>
         <a class="btn btn--plain" href="drone.html" data-action="drone">Fly the drone</a>
       </div>
@@ -166,44 +153,20 @@ gripper(1)                    // open: let go</textarea>
     <div class="robot-row">
       <div>
         <h3>Dose</h3>
-        <p>
-          A hospital delivery robot with the reBot arm mounted on top. It's locked, and
-          the password is not "password".
-        </p>
+        <p>A hospital delivery robot with the reBot arm on top. It's locked.</p>
         <button type="button" class="btn btn--plain" data-action="dose">Enter the code</button>
       </div>
     </div>
     <p class="later">Next on my list: a humanoid, a quadruped, a mobile base and a submarine.</p>
   </section>
 
-  <section class="wrap notebook" aria-labelledby="notebook-title">
-    <h2 id="notebook-title">Lab notebook</h2>
-    <p class="muted">From the project's git history, newest first.</p>
-    <!-- RISHIK: add photo of your setup, an early sketch, or the first version of the
-         sim here, e.g.
-         <figure><img src="assets/notebook/first-version.jpg" alt="…"><figcaption>…</figcaption></figure> -->
-    <ol class="log">
-      <li><time datetime="2026-10-26">2026-10-26</time><p>Redesigned this page. Murari Kanishk Balla is credited for web design.</p></li>
-      <li><time datetime="2026-10-26">2026-10-26</time><p>Added the real reBot B601 arm from its CAD files. Fixed the motor housings on joints 2 and 6 spinning along with their links. IK now tries other joint combinations when a pose would make the arm hit itself. The Dose robot got the reBot arm.</p></li>
-      <li><time datetime="2026-05-16">2026-05-16</time><p>Put the site on GitHub Pages. Updated the about page, the home page and the scripts.</p></li>
-      <li><time datetime="2026-05-14">2026-05-14</time><p>Fixed a hole where you could skip the Dose password by typing its URL directly, and fixed a camera feed glitch on the password screen.</p></li>
-      <li><time datetime="2026-05-10">2026-05-10</time><p>Wrote SECURITY.md and added the Dose security module.</p></li>
-      <li><time datetime="2026-05-08">2026-05-08</time><p>Added motion recording, and updated the controls in the HUD and side panel.</p></li>
-      <li><time datetime="2026-05-03">2026-05-03</time><p>First commit.</p></li>
-      <!-- RISHIK: add milestones from before May 2026 (when you started, the first IK
-           that worked, the first drone flight, ...), one line each. -->
-    </ol>
-  </section>
 
   <section class="wrap why" aria-labelledby="why-title">
     <h2 id="why-title">Why I made this</h2>
     <!-- RISHIK: write this. Say what got you into robotics, what bugged you about the
          tools you tried, and who you want to use RoboForge. Keep it short and honest.
          The sentence below is your About page sentence, reworded, as a placeholder. -->
-    <p>
-      I wanted robotics simulation to be something you open in a browser and start
-      using right away, without setting up SITL or ROS first.
-    </p>
+    <p>I wanted robotics simulation you can open in a browser and use right away, without setting up SITL or ROS.</p>
     <p><a class="textlink" href="about.html">More about the project</a></p>
   </section>
 
@@ -228,7 +191,7 @@ gripper(1)                    // open: let go</textarea>
 <div class="overlay" id="pw-modal" role="dialog" aria-modal="true" aria-labelledby="pw-title">
   <form class="panel" id="pw-form" autocomplete="off">
     <h2 id="pw-title">Dose</h2>
-    <p>This one's locked. Enter the access code to open the hospital robot.</p>
+    <p>Enter the access code.</p>
     <label for="pw-input">Access code</label>
     <input id="pw-input" type="password" autocomplete="off">
     <div class="err" id="pw-err" role="alert">That's not it.</div>
