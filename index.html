@@ -137,7 +137,7 @@ gripper(1)                    // open: let go</textarea>
   </section>
 
   <section class="wrap robots" aria-labelledby="robots-title">
-    <h2 id="robots-title">Two other robots</h2>
+    <h2 id="robots-title">Another robot</h2>
     <div class="robot-row">
       <img src="assets/shots/drone.jpg" width="1600" height="1000" loading="lazy"
         alt="The drone simulator: a small quadcopter hovering over a street between tall city buildings, with flight controls on the right.">
@@ -148,13 +148,6 @@ gripper(1)                    // open: let go</textarea>
           export the mission as a DroneKit script.
         </p>
         <a class="btn btn--plain" href="drone.html" data-action="drone">Fly the drone</a>
-      </div>
-    </div>
-    <div class="robot-row">
-      <div>
-        <h3>Dose</h3>
-        <p>A hospital delivery robot with the reBot arm on top. It's locked.</p>
-        <button type="button" class="btn btn--plain" data-action="dose">Enter the code</button>
       </div>
     </div>
     <p class="later">Next on my list: a humanoid, a quadruped, a mobile base and a submarine.</p>
@@ -188,19 +181,6 @@ gripper(1)                    // open: let go</textarea>
   <div class="panel"><span class="spin" aria-hidden="true"></span><span id="loader-label">Opening…</span></div>
 </div>
 
-<div class="overlay" id="pw-modal" role="dialog" aria-modal="true" aria-labelledby="pw-title">
-  <form class="panel" id="pw-form" autocomplete="off">
-    <h2 id="pw-title">Dose</h2>
-    <p>Enter the access code.</p>
-    <label for="pw-input">Access code</label>
-    <input id="pw-input" type="password" autocomplete="off">
-    <div class="err" id="pw-err" role="alert">That's not it.</div>
-    <div class="row">
-      <button class="btn btn--plain" id="pw-cancel" type="button">Cancel</button>
-      <button class="btn" id="pw-submit" type="button">Unlock</button>
-    </div>
-  </form>
-</div>
 
 <script type="module" src="js/home/home.js"></script>
 </body>

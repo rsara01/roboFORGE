@@ -109,6 +109,8 @@ function tryPw() {
 
 // The panel is a <form> only so browsers treat the password field normally;
 // Enter is handled below, so never let it actually submit/reload.
+// Dose is hidden from the page for now; the gate stays ready for when it's back.
+if (pwModal) {
 document.getElementById('pw-form').addEventListener('submit', (e) => e.preventDefault());
 pwSubmit.addEventListener('click', tryPw);
 pwCancel.addEventListener('click', () => { Sound.click(); closePwModal(); });
@@ -126,6 +128,7 @@ pwModal.addEventListener('keydown', (e) => {
   if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
   else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
 });
+}
 
 // ---------------------------------------------------------------- load my .json
 
